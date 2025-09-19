@@ -1,0 +1,16 @@
+# Python/Django
+__pycache__/
+*.py[cod]
+env/
+venv/
+*.sqlite3
+/media/
+.env
+# Node
+node_modules/
+build/
+frontend/node_modules/
+# IDEs
+.vscode/
+.idea/
+.DS_Store

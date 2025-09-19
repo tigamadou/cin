@@ -1,0 +1,10 @@
+Django>=4.2
+djangorestframework
+qrcode
+Pillow
+python-dotenv
+django-cors-headers
+psycopg2-binary
+dj-database-url
+gunicorn>=20.1.0
+whitenoise
