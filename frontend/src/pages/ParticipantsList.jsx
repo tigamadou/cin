@@ -48,26 +48,64 @@ export default function ParticipantsList() {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {list.map((p) => (
-            <div key={p.id} className="bg-white p-4 rounded shadow">
-              <h3 className="font-medium">
-                {p.first_name} {p.last_name}
-              </h3>
+            <div
+              key={p.id}
+              className="bg-white p-4 rounded shadow hover:shadow-md transition"
+            >
+              {/* Header : nom complet */}
+              <div className="flex items-center justify-between">
+                <h3 className="font-semibold text-gray-800">
+                  {p.first_name} {p.last_name}
+                </h3>
+                {p.used ? (
+                  <span className="px-2 py-1 text-xs rounded bg-red-100 text-red-700">
+                    Utilisé
+                  </span>
+                ) : (
+                  <span className="px-2 py-1 text-xs rounded bg-green-100 text-green-700">
+                    Actif
+                  </span>
+                )}
+              </div>
+
+              {/* Infos principales */}
               <p className="text-sm text-gray-600">{p.email}</p>
-              <div className="mt-2 flex gap-2">
+              {p.phone && (
+                <p className="text-sm text-gray-600">
+                  <span className="font-medium">☎</span> {p.phone}
+                </p>
+              )}
+
+              {/* Organisation + poste */}
+              <div className="mt-2 text-sm text-gray-700">
+                {p.organization && <p>{p.organization}</p>}
+                {p.position && <p className="italic">{p.position}</p>}
+              </div>
+
+              {/* Pays + type d'événement */}
+              <div className="mt-1 flex flex-wrap gap-x-4 text-xs text-gray-500">
+                {p.country && <span>Pays : {p.country}</span>}
+                {p.event_type && <span>Événement : {p.event_type}</span>}
+              </div>
+
+              {/* Actions */}
+              <div className="mt-3 flex gap-3 text-sm">
                 <Link
                   to={`/participants/${p.id}`}
-                  className="text-sm text-blue-600"
+                  className="text-blue-600 hover:underline"
                 >
                   Détails
                 </Link>
-                <a
-                  href={p.qr_url}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="text-sm text-gray-600"
-                >
-                  Ouvrir QR
-                </a>
+                {p.qr_url && (
+                  <a
+                    href={p.qr_url}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="text-gray-600 hover:underline"
+                  >
+                    Ouvrir QR
+                  </a>
+                )}
               </div>
             </div>
           ))}

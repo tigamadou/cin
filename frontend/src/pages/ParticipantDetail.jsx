@@ -38,17 +38,78 @@ export default function ParticipantDetail() {
 
   return (
     <div className="max-w-lg mx-auto bg-white p-6 rounded shadow">
-      <h2 className="text-xl font-bold mb-2">
+      {/* Header */}
+      <h2 className="text-2xl font-bold mb-2 text-gray-800">
         {p.first_name} {p.last_name}
       </h2>
-      <p className="text-sm text-gray-600 mb-2">Email: {p.email}</p>
-      <p className="text-sm text-gray-500">Ticket: {p.ticket_uuid}</p>
+      <p className="text-sm text-gray-600">Email : {p.email}</p>
+      {p.phone && (
+        <p className="text-sm text-gray-600">Téléphone : {p.phone}</p>
+      )}
+
+      {/* Organisation & poste */}
+      {(p.organization || p.position) && (
+        <div className="mt-3">
+          {p.organization && (
+            <p className="text-sm text-gray-700">
+              <span className="font-medium">Organisation :</span>{" "}
+              {p.organization}
+            </p>
+          )}
+          {p.position && (
+            <p className="text-sm text-gray-700">
+              <span className="font-medium">Poste :</span> {p.position}
+            </p>
+          )}
+        </div>
+      )}
+
+      {/* Pays & type d’événement */}
+      <div className="mt-3 text-sm text-gray-700">
+        {p.country && (
+          <p>
+            <span className="font-medium">Pays :</span> {p.country}
+          </p>
+        )}
+        {p.event_type && (
+          <p>
+            <span className="font-medium">Événement :</span> {p.event_type}
+          </p>
+        )}
+      </div>
+
+      {/* Ticket & statut */}
+      <div className="mt-4">
+        <p className="text-sm text-gray-500">
+          <span className="font-medium">Ticket :</span> {p.ticket_uuid}
+        </p>
+        <p className="mt-1 text-sm">
+          Statut :{" "}
+          {p.used ? (
+            <span className="px-2 py-1 text-xs rounded bg-red-100 text-red-700">
+              Utilisé{" "}
+              {p.used_at ? `(le ${new Date(p.used_at).toLocaleString()})` : ""}
+            </span>
+          ) : (
+            <span className="px-2 py-1 text-xs rounded bg-green-100 text-green-700">
+              Actif
+            </span>
+          )}
+        </p>
+      </div>
+
+      {/* QR Code */}
       {p.qr_base64 && (
-        <img
-          alt="qr"
-          src={`data:image/png;base64,${p.qr_base64}`}
-          className="mt-4 max-w-xs"
-        />
+        <div className="mt-6 text-center">
+          <img
+            alt="QR code"
+            src={`data:image/png;base64,${p.qr_base64}`}
+            className="mx-auto max-w-xs"
+          />
+          <p className="text-xs text-gray-500 mt-2">
+            Présentez ce code lors de l’événement
+          </p>
+        </div>
       )}
     </div>
   )

@@ -25,26 +25,49 @@ def upload_qr_path(instance, filename):
 
 
 class Participant(models.Model):
-    first_name = models.CharField(max_length=150)
-    last_name = models.CharField(max_length=150, blank=True)
-    email = models.EmailField()
-    ticket_uuid = models.UUIDField(
-        default=uuid.uuid4, unique=True, editable=False)
-    qr_code = models.ImageField(upload_to='qr_codes/', null=True, blank=True)
-    created_at = models.DateTimeField(auto_now_add=True)
+    first_name = models.CharField("Prénoms", max_length=150)
+    last_name = models.CharField("Nom", max_length=150, blank=True)
+    email = models.EmailField("Email")
+    phone = models.CharField("Téléphone", max_length=30, blank=True)
+    organization = models.CharField("Organisation", max_length=200, blank=True)
+    position = models.CharField("Poste", max_length=150, blank=True)
+    country = models.CharField("Pays", max_length=100, blank=True)
+    event_type = models.CharField(
+        "Type d'événement", max_length=100, blank=True)
 
-    # NEW fields
-    used = models.BooleanField(default=False)
-    used_at = models.DateTimeField(null=True, blank=True)
+    ticket_uuid = models.UUIDField(
+        "Ticket UUID",
+        default=uuid.uuid4,
+        unique=True,
+        editable=False
+    )
+    qr_code = models.ImageField(
+        "QR Code",
+        upload_to='qr_codes/',
+        null=True,
+        blank=True
+    )
+    created_at = models.DateTimeField("Créé le", auto_now_add=True)
+
+    # usage flag
+    used = models.BooleanField("Utilisé", default=False)
+    used_at = models.DateTimeField("Utilisé le", null=True, blank=True)
+
+    class Meta:
+        verbose_name = "Participant"
+        verbose_name_plural = "Participants"
+        ordering = ["-created_at"]
 
     def mark_used(self):
+        """Idempotent: marque le ticket comme utilisé et enregistre la date."""
         if not self.used:
             self.used = True
             self.used_at = timezone.now()
             self.save(update_fields=['used', 'used_at'])
 
     def __str__(self):
-        return f"{self.first_name} {self.last_name} <{self.email}>"
+        full_name = f"{self.first_name} {self.last_name}".strip()
+        return f"{full_name} <{self.email}>"
 
 
 class RegistrationSetting(models.Model):

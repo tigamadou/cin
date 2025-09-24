@@ -6,6 +6,7 @@ from rest_framework.permissions import IsAdminUser, AllowAny
 
 from .serializers import ParticipantCreateSerializer, ParticipantSerializer
 from .models import Participant, RegistrationSetting
+from django.db import transaction
 from django.contrib.auth import authenticate, login, logout
 from django.views.decorators.csrf import ensure_csrf_cookie
 from django.middleware.csrf import get_token
@@ -25,36 +26,53 @@ class ParticipantListCreateAPIView(generics.ListCreateAPIView):
         return ParticipantSerializer
 
     def get_serializer_context(self):
+        # met le request dans le contexte pour construire des URLs absolues
         return {'request': self.request}
 
     def create(self, request, *args, **kwargs):
         # Bloquer la création si les inscriptions sont fermées
         try:
-            if not RegistrationSetting.get_solo().is_open:
-                return Response({'detail': 'Registrations are closed.'}, status=status.HTTP_403_FORBIDDEN)
+            setting = RegistrationSetting.get_solo()
+            if not getattr(setting, "is_open", True):
+                return Response(
+                    {'detail': 'Registrations are closed.'},
+                    status=status.HTTP_403_FORBIDDEN
+                )
         except Exception:
-            # en cas de problème d'accès au singleton, laisser passer (ou renvoyer une erreur si tu préfères)
+            # en cas de problème d'accès au singleton, on laisse passer (option de dev)
             pass
 
         serializer = self.get_serializer(
-            data=request.data, context={'request': request})
+            data=request.data, context=self.get_serializer_context())
         serializer.is_valid(raise_exception=True)
-        participant = serializer.save()
 
-        # Serializer de sortie (complet)
+        # Créer l'objet dans une transaction (consistance si on veut étendre)
+        with transaction.atomic():
+            participant = serializer.save()
+
+        # Sérialiser la sortie complète (avec helpers QR)
         out = ParticipantSerializer(
-            participant, context={'request': request}).data
+            participant, context=self.get_serializer_context()).data
 
-        # Ajouter qr_base64 et qr_url via les helpers du serializer de création
+        # Essayer d'ajouter qr_base64 et qr_url via le serializer de création (celui qui contient les helpers)
         try:
+            # serializer est la classe de création utilisée ci-dessus
             out['qr_base64'] = serializer.get_qr_base64(participant)
         except Exception:
             out['qr_base64'] = None
+
         try:
             out['qr_url'] = serializer.get_qr_url(participant)
         except Exception:
-            out['qr_url'] = request.build_absolute_uri(
-                participant.qr_code.url) if participant.qr_code else None
+            # fallback sûr : ne pas accéder à .url si qr_code est None
+            try:
+                if getattr(participant, "qr_code", None) and getattr(participant.qr_code, "url", None):
+                    out['qr_url'] = request.build_absolute_uri(
+                        participant.qr_code.url)
+                else:
+                    out['qr_url'] = None
+            except Exception:
+                out['qr_url'] = None
 
         headers = self.get_success_headers(serializer.data)
         return Response(out, status=status.HTTP_201_CREATED, headers=headers)
@@ -68,31 +86,31 @@ class ParticipantRetrieveAPIView(generics.RetrieveAPIView):
     queryset = Participant.objects.all()
     serializer_class = ParticipantSerializer
 
+    def get_serializer_context(self):
+        return {'request': self.request}
+
     def retrieve(self, request, *args, **kwargs):
         instance = self.get_object()
-        data = self.get_serializer(instance, context={'request': request}).data
+        serializer = self.get_serializer(
+            instance, context=self.get_serializer_context())
+        data = serializer.data
 
-        # Tentative d'ajout des infos QR via le serializer de création (helpers)
+        # Les helpers sont disponibles sur le serializer (QRMixin) — on préfère les utiliser
         try:
-            create_ser = ParticipantCreateSerializer(
-                instance, context={'request': request})
-            data['qr_base64'] = create_ser.get_qr_base64(instance)
-            data['qr_url'] = create_ser.get_qr_url(instance)
+            data['qr_base64'] = serializer.get_qr_base64(instance)
         except Exception:
-            # Fallback : lire le fichier si présent
+            data['qr_base64'] = None
+
+        try:
+            data['qr_url'] = serializer.get_qr_url(instance)
+        except Exception:
             try:
-                if instance.qr_code:
-                    with instance.qr_code.open('rb') as f:
-                        import base64
-                        data['qr_base64'] = base64.b64encode(
-                            f.read()).decode('utf-8')
-                        data['qr_url'] = request.build_absolute_uri(
-                            instance.qr_code.url)
+                if getattr(instance, "qr_code", None) and getattr(instance.qr_code, "url", None):
+                    data['qr_url'] = request.build_absolute_uri(
+                        instance.qr_code.url)
                 else:
-                    data['qr_base64'] = None
                     data['qr_url'] = None
             except Exception:
-                data['qr_base64'] = None
                 data['qr_url'] = None
 
         return Response(data)
