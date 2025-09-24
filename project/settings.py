@@ -104,4 +104,18 @@ EMAIL_USE_TLS = os.getenv('EMAIL_USE_TLS', 'False') == 'True'
 DEFAULT_FROM_EMAIL = os.getenv('DEFAULT_FROM_EMAIL', 'no-reply@example.com')
 
 
-CORS_ALLOW_ALL_ORIGINS = True
+# CORS_ALLOW_ALL_ORIGINS = True
+# si tu utilises django-cors-headers:
+CORS_ALLOW_CREDENTIALS = True
+CORS_ALLOWED_ORIGINS = [
+    "http://127.0.0.1:5173",  # Vite
+    "http://localhost:5173",
+]
+# si tu utilises proxy (vite -> django) et front dans Docker, ajuste en conséquence
+
+# cookies (optionnel)
+SESSION_COOKIE_SAMESITE = "Lax"
+CSRF_COOKIE_SAMESITE = "Lax"
+# en dev tu peux garder secure=False; en prod secure=True
+SESSION_COOKIE_SECURE = False
+CSRF_COOKIE_SECURE = False
