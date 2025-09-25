@@ -18,17 +18,66 @@ export default function AddParticipant() {
   const [resp, setResp] = useState(null)
   const [error, setError] = useState(null)
   const [loading, setLoading] = useState(false)
+  const [invalidFields, setInvalidFields] = useState(new Set())
 
-  const update = (key, value) => setForm((s) => ({ ...s, [key]: value }))
+  const update = (key, value) => {
+    setForm((s) => ({ ...s, [key]: value }))
+    // Clear invalid state when user starts typing
+    if (invalidFields.has(key)) {
+      setInvalidFields(prev => {
+        const newSet = new Set(prev)
+        newSet.delete(key)
+        return newSet
+      })
+    }
+  }
+
+  // Check email uniqueness on blur
+  const handleEmailBlur = async () => {
+    const email = form.email.trim()
+    if (!email) return
+
+    try {
+      // Check if email already exists by trying to get participants
+      const participants = await api.listParticipants()
+      const existingParticipant = participants.data?.find(p => 
+        p.email.toLowerCase() === email.toLowerCase()
+      )
+      
+      if (existingParticipant) {
+        setError("Un participant avec cet email existe déjà.")
+        setInvalidFields(new Set(['email']))
+      }
+    } catch (err) {
+      // Ignore errors during email check
+      console.warn("Email check failed:", err)
+    }
+  }
 
   const submit = async (e) => {
     e.preventDefault()
     setError(null)
     setResp(null)
 
-    // client-side minimal validation
-    if (!form.first_name.trim() || !form.email.trim()) {
-      setError("Le prénom et l'email sont requis.")
+    // client-side validation - all fields are required
+    const requiredFields = [
+      { key: 'first_name', label: 'Prénom' },
+      { key: 'last_name', label: 'Nom' },
+      { key: 'email', label: 'Email' },
+      { key: 'phone', label: 'Téléphone' },
+      { key: 'organization', label: 'Organisation' },
+      { key: 'position', label: 'Poste' },
+      { key: 'country', label: 'Pays' },
+      { key: 'event_type', label: 'Type d\'événement' }
+    ]
+
+    const missingFields = requiredFields.filter(field => !form[field.key].trim())
+    
+    if (missingFields.length > 0) {
+      const fieldNames = missingFields.map(f => f.label).join(', ')
+      setError(`Les champs suivants sont requis : ${fieldNames}.`)
+      // Mark missing fields as invalid
+      setInvalidFields(new Set(missingFields.map(f => f.key)))
       return
     }
 
@@ -38,12 +87,17 @@ export default function AddParticipant() {
       // si ta fonction api lance une erreur au lieu de retourner status/data, adapte en conséquence
       setResp(data)
       setForm(initialForm)
+      setInvalidFields(new Set())
     } catch (err) {
       console.error("createParticipant failed:", err)
       if (err && err.status === 415) {
         setError(
           "Type de contenu non-supporté (415). Vérifie le header Content-Type."
         )
+      } else if (err && err.data && err.data.email) {
+        // Handle email validation error specifically
+        setError(err.data.email[0])
+        setInvalidFields(new Set(['email']))
       } else if (err && err.data && err.data.detail) {
         setError(err.data.detail)
       } else if (err && err.data) {
@@ -77,6 +131,15 @@ export default function AddParticipant() {
     }
   }
 
+  // helper: get CSS classes for input fields based on validation state
+  const getInputClasses = (fieldKey) => {
+    const baseClasses = "w-full p-2 border rounded"
+    const invalidClasses = "border-red-500 focus:border-red-500 focus:ring-red-500"
+    const validClasses = "border-gray-300 focus:border-blue-500 focus:ring-blue-500"
+    
+    return `${baseClasses} ${invalidFields.has(fieldKey) ? invalidClasses : validClasses}`
+  }
+
   // helper: get a usable QR url (prefer qr_url, fallback to data url)
   const getQrSrc = (r) => {
     if (!r) return null
@@ -99,14 +162,15 @@ export default function AddParticipant() {
             required
             value={form.first_name}
             onChange={(e) => update("first_name", e.target.value)}
-            className="w-full p-2 border rounded"
+            className={getInputClasses("first_name")}
             placeholder="Prénom"
             aria-label="Prénom"
           />
           <input
+            required
             value={form.last_name}
             onChange={(e) => update("last_name", e.target.value)}
-            className="w-full p-2 border rounded"
+            className={getInputClasses("last_name")}
             placeholder="Nom"
             aria-label="Nom"
           />
@@ -116,7 +180,8 @@ export default function AddParticipant() {
           required
           value={form.email}
           onChange={(e) => update("email", e.target.value)}
-          className="w-full p-2 border rounded"
+          onBlur={handleEmailBlur}
+          className={getInputClasses("email")}
           placeholder="Email"
           type="email"
           aria-label="Email"
@@ -124,16 +189,18 @@ export default function AddParticipant() {
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
           <input
+            required
             value={form.phone}
             onChange={(e) => update("phone", e.target.value)}
-            className="w-full p-2 border rounded"
+            className={getInputClasses("phone")}
             placeholder="Téléphone"
             aria-label="Téléphone"
           />
           <input
+            required
             value={form.organization}
             onChange={(e) => update("organization", e.target.value)}
-            className="w-full p-2 border rounded"
+            className={getInputClasses("organization")}
             placeholder="Organisation"
             aria-label="Organisation"
           />
@@ -141,25 +208,28 @@ export default function AddParticipant() {
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
           <input
+            required
             value={form.position}
             onChange={(e) => update("position", e.target.value)}
-            className="w-full p-2 border rounded"
+            className={getInputClasses("position")}
             placeholder="Poste"
             aria-label="Poste"
           />
           <input
+            required
             value={form.country}
             onChange={(e) => update("country", e.target.value)}
-            className="w-full p-2 border rounded"
+            className={getInputClasses("country")}
             placeholder="Pays"
             aria-label="Pays"
           />
         </div>
 
         <input
+          required
           value={form.event_type}
           onChange={(e) => update("event_type", e.target.value)}
-          className="w-full p-2 border rounded"
+          className={getInputClasses("event_type")}
           placeholder="Type d'événement"
           aria-label="Type d'événement"
         />
@@ -181,6 +251,7 @@ export default function AddParticipant() {
               setForm(initialForm)
               setError(null)
               setResp(null)
+              setInvalidFields(new Set())
             }}
           >
             Réinitialiser
@@ -198,7 +269,7 @@ export default function AddParticipant() {
         <div className="mt-4 border-t pt-4">
           <h3 className="font-medium">Participant créé</h3>
 
-          <div className="mt-2 flex items-center gap-3">
+          <div className="mt-2  items-center gap-3">
             <div>
               {getQrSrc(resp) ? (
                 <img

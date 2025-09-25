@@ -1,12 +1,14 @@
 import React, { useEffect, useState } from "react"
 import { api } from "../api"
-import { useParams } from "react-router-dom"
+import { useParams, useNavigate } from "react-router-dom"
 
 export default function ParticipantDetail() {
   const [p, setP] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
+  const [deleting, setDeleting] = useState(false)
   const { id } = useParams()
+  const navigate = useNavigate()
 
   useEffect(() => {
     let mounted = true
@@ -30,6 +32,29 @@ export default function ParticipantDetail() {
       mounted = false
     }
   }, [id])
+
+  // Delete participant function
+  const handleDelete = async () => {
+    if (!window.confirm(`Êtes-vous sûr de vouloir supprimer le participant "${p.first_name} ${p.last_name}" ?`)) {
+      return
+    }
+
+    setDeleting(true)
+    try {
+      await api.deleteParticipant(id)
+      navigate('/participants')
+    } catch (error) {
+      console.error("Failed to delete participant:", error)
+      alert("Erreur lors de la suppression du participant")
+    } finally {
+      setDeleting(false)
+    }
+  }
+
+  // Edit participant function
+  const handleEdit = () => {
+    navigate(`/participants/${id}/edit`)
+  }
 
   if (loading) return <div className="p-4">Chargement…</div>
   if (error)
@@ -107,10 +132,33 @@ export default function ParticipantDetail() {
             className="mx-auto max-w-xs"
           />
           <p className="text-xs text-gray-500 mt-2">
-            Présentez ce code lors de l’événement
+            Présentez ce code lors de l'événement
           </p>
         </div>
       )}
+
+      {/* Action Buttons */}
+      <div className="mt-6 flex gap-3 justify-center">
+        <button
+          onClick={handleEdit}
+          className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700"
+        >
+          Modifier
+        </button>
+        <button
+          onClick={handleDelete}
+          disabled={deleting}
+          className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 disabled:opacity-50"
+        >
+          {deleting ? "Suppression..." : "Supprimer"}
+        </button>
+        <button
+          onClick={() => navigate('/participants')}
+          className="px-4 py-2 bg-gray-600 text-white rounded hover:bg-gray-700"
+        >
+          Retour à la liste
+        </button>
+      </div>
     </div>
   )
 }

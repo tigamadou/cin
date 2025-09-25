@@ -27,7 +27,7 @@ def upload_qr_path(instance, filename):
 class Participant(models.Model):
     first_name = models.CharField("Prénoms", max_length=150)
     last_name = models.CharField("Nom", max_length=150, blank=True)
-    email = models.EmailField("Email")
+    email = models.EmailField("Email", unique=True)
     phone = models.CharField("Téléphone", max_length=30, blank=True)
     organization = models.CharField("Organisation", max_length=200, blank=True)
     position = models.CharField("Poste", max_length=150, blank=True)

@@ -17,6 +17,17 @@ export const api = {
       body: JSON.stringify(payload)
     }),
 
+  updateParticipant: (id, payload) =>
+    apiFetch(`${API_PREFIX}/participants/${encodeURIComponent(id)}/`, {
+      method: "PUT",
+      body: JSON.stringify(payload)
+    }),
+
+  deleteParticipant: (id) =>
+    apiFetch(`${API_PREFIX}/participants/${encodeURIComponent(id)}/`, {
+      method: "DELETE"
+    }),
+
   verifyTicket: (payload) =>
     apiFetch(`${API_PREFIX}/verify/`, {
       method: "POST",

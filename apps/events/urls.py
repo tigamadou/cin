@@ -2,18 +2,19 @@
 from django.urls import path
 from .views import (
     ParticipantListCreateAPIView,
-    ParticipantRetrieveAPIView,
+    ParticipantRetrieveUpdateDestroyAPIView,
     VerifyTicketAPIView,
     ToggleRegistrationAPIView,
     CurrentUserAPIView,
-    CsrfTokenView, LoginAPIView, LogoutAPIView
+    CsrfTokenView, LoginAPIView, LogoutAPIView,
+    ActivateUserAPIView
 )
 
 urlpatterns = [
     # participants
     path('participants/', ParticipantListCreateAPIView.as_view(),
          name='participants-list-create'),
-    path('participants/<int:pk>/', ParticipantRetrieveAPIView.as_view(),
+    path('participants/<int:pk>/', ParticipantRetrieveUpdateDestroyAPIView.as_view(),
          name='participant-detail'),
 
     # verification
@@ -28,4 +29,5 @@ urlpatterns = [
     path('csrf/', CsrfTokenView.as_view(), name='csrf'),
     path('login/', LoginAPIView.as_view(), name='login'),
     path('logout/', LogoutAPIView.as_view(), name='logout'),
+    path('activate-user/', ActivateUserAPIView.as_view(), name='activate-user'),
 ]

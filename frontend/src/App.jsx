@@ -3,6 +3,7 @@ import { Routes, Route, Navigate } from "react-router-dom"
 import Navbar from "./components/Navbar"
 import ParticipantsList from "./pages/ParticipantsList"
 import ParticipantDetail from "./pages/ParticipantDetail"
+import EditParticipant from "./pages/EditParticipant"
 import AddParticipant from "./pages/AddParticipant"
 import VerifyTicket from "./pages/VerifyTicket"
 import { api } from "./api"
@@ -57,6 +58,14 @@ export default function App() {
             element={
               <RequireAdmin>
                 <ParticipantDetail />
+              </RequireAdmin>
+            }
+          />
+          <Route
+            path="/participants/:id/edit"
+            element={
+              <RequireAdmin>
+                <EditParticipant />
               </RequireAdmin>
             }
           />

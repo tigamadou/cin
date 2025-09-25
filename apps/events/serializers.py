@@ -84,6 +84,21 @@ class ParticipantCreateSerializer(QRMixin, serializers.ModelSerializer):
         except Exception:
             # Si le réglage n'existe pas ou erreur, on laisse passer (désirable lors de dev)
             pass
+        
+        # Vérifier l'unicité de l'email
+        email = attrs.get('email')
+        if email:
+            # Vérifier si un participant avec cet email existe déjà
+            existing_participant = Participant.objects.filter(email=email)
+            # Si on est en mode update (instance existe), exclure l'instance actuelle
+            if self.instance:
+                existing_participant = existing_participant.exclude(pk=self.instance.pk)
+            
+            if existing_participant.exists():
+                raise serializers.ValidationError({
+                    'email': 'Un participant avec cet email existe déjà.'
+                })
+        
         return attrs
 
     def create(self, validated_data):
@@ -120,7 +135,9 @@ class ParticipantCreateSerializer(QRMixin, serializers.ModelSerializer):
                 body = (
                     f"Bonjour {participant.first_name},\n\n"
                     f"Merci pour votre inscription. Votre ticket: {participant.ticket_uuid}\n\n"
-                    "Veuillez trouver votre QR code en pièce jointe (si disponible)."
+                    "Veuillez trouver votre QR code en pièce jointe (si disponible).\n\n"
+                    "Un compte utilisateur a été créé automatiquement avec votre email. "
+                    "Vous pouvez l'activer en définissant un mot de passe via l'API d'activation."
                 )
                 email = EmailMessage(subject, body, to=[participant.email])
                 if qr_bytes:

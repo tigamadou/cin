@@ -1,12 +1,12 @@
 services:
-  db:
+  postgres:
     image: postgres:14
     environment:
-      POSTGRES_DB: ${POSTGRES_DB:-qrevent}
-      POSTGRES_USER: ${POSTGRES_USER:-qreventuser}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-qreventpass}
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
     volumes:
-      - db_data:/var/lib/postgresql/data
+      - postgres_data:/var/lib/postgresql/data
     restart: unless-stopped
 
   web:
@@ -14,14 +14,14 @@ services:
     command: gunicorn project.wsgi:application --bind 0.0.0.0:8000
     env_file: .env
     environment:
-      - DATABASE_URL=postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
+      - DATABASE_URL=postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
     ports:
       - "8000:8000"
     volumes:
       - .:/app
       - ./media:/app/media
     depends_on:
-      - db
+      - postgres
     restart: unless-stopped
   frontend:
     image: node:20-bullseye
@@ -34,4 +34,4 @@ services:
     command: sh -c "npm install && npm run dev"
 
 volumes:
-  db_data:
+  postgres_data:

@@ -63,7 +63,16 @@ export default function VerifyPage() {
 
       html5QrcodeRef.current = new Html5Qrcode(scannerId, { verbose: false })
 
-      const config = { fps: 10, qrbox: { width: 300, height: 300 } }
+      // Get the scanner element dimensions
+      const scannerElement = document.getElementById(scannerId)
+      const scannerWidth = scannerElement.offsetWidth
+      const scannerHeight = scannerElement.offsetHeight
+
+      // Use full size of the scanner element
+      const config = { 
+        fps: 10, 
+        qrbox: { width: scannerWidth, height: scannerHeight } 
+      }
 
       await html5QrcodeRef.current.start(
         { facingMode: "environment" },
@@ -248,7 +257,7 @@ export default function VerifyPage() {
 
   // Main UI
   return (
-    <div className="max-w-5xl mx-auto p-6">
+    <div className="max-w-2xl mx-auto p-6">
       <h2 className="text-2xl font-bold text-gray-800 mb-6">
         Vérification des tickets — Scan QR
       </h2>
@@ -265,12 +274,12 @@ export default function VerifyPage() {
         </label>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-1 gap-6">
         {/* Scanner */}
         <div className="flex flex-col">
           <div
             id={scannerId}
-            className="w-full min-h-[320px] bg-black rounded-lg shadow-inner"
+            className="w-full min-h-[300px] bg-black rounded-lg shadow-inner aspect-video"
           />
           <div className="mt-3 flex gap-3">
             {!scanning ? (

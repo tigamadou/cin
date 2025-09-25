@@ -8,9 +8,11 @@ from .serializers import ParticipantCreateSerializer, ParticipantSerializer
 from .models import Participant, RegistrationSetting
 from django.db import transaction
 from django.contrib.auth import authenticate, login, logout
+from django.contrib.auth import get_user_model
 from django.views.decorators.csrf import ensure_csrf_cookie
 from django.middleware.csrf import get_token
 from django.utils.decorators import method_decorator
+from django.core.exceptions import ValidationError
 
 
 class ParticipantListCreateAPIView(generics.ListCreateAPIView):
@@ -49,6 +51,39 @@ class ParticipantListCreateAPIView(generics.ListCreateAPIView):
         # Créer l'objet dans une transaction (consistance si on veut étendre)
         with transaction.atomic():
             participant = serializer.save()
+            
+            # Créer un utilisateur si l'email n'est pas déjà utilisé
+            try:
+                User = get_user_model()
+                email = participant.email
+                
+                # Vérifier si un utilisateur avec cet email existe déjà
+                if not User.objects.filter(email=email).exists():
+                    # Générer un nom d'utilisateur basé sur l'email
+                    username = email.split('@')[0]
+                    # S'assurer que le nom d'utilisateur est unique
+                    original_username = username
+                    counter = 1
+                    while User.objects.filter(username=username).exists():
+                        username = f"{original_username}_{counter}"
+                        counter += 1
+                    
+                    # Créer l'utilisateur
+                    user = User.objects.create_user(
+                        username=username,
+                        email=email,
+                        first_name=participant.first_name,
+                        last_name=participant.last_name,
+                        password=None  # Pas de mot de passe par défaut
+                    )
+                    # Marquer l'utilisateur comme inactif par défaut (sécurité)
+                    user.is_active = False
+                    user.save()
+                    
+            except Exception as e:
+                # En cas d'erreur lors de la création de l'utilisateur,
+                # on continue sans échouer la création du participant
+                pass
 
         # Sérialiser la sortie complète (avec helpers QR)
         out = ParticipantSerializer(
@@ -78,13 +113,20 @@ class ParticipantListCreateAPIView(generics.ListCreateAPIView):
         return Response(out, status=status.HTTP_201_CREATED, headers=headers)
 
 
-class ParticipantRetrieveAPIView(generics.RetrieveAPIView):
+class ParticipantRetrieveUpdateDestroyAPIView(generics.RetrieveUpdateDestroyAPIView):
     """
     GET /api/participants/<pk>/ -> détail d'un participant
+    PUT/PATCH /api/participants/<pk>/ -> modifier un participant
+    DELETE /api/participants/<pk>/ -> supprimer un participant
     Fournit aussi qr_base64 et qr_url.
     """
     queryset = Participant.objects.all()
-    serializer_class = ParticipantSerializer
+    permission_classes = [IsAdminUser]  # Seuls les admins peuvent modifier/supprimer
+
+    def get_serializer_class(self):
+        if self.request.method in ['PUT', 'PATCH']:
+            return ParticipantCreateSerializer
+        return ParticipantSerializer
 
     def get_serializer_context(self):
         return {'request': self.request}
@@ -114,6 +156,94 @@ class ParticipantRetrieveAPIView(generics.RetrieveAPIView):
                 data['qr_url'] = None
 
         return Response(data)
+
+    def update(self, request, *args, **kwargs):
+        partial = kwargs.pop('partial', False)
+        instance = self.get_object()
+        
+        # Utiliser le serializer de création pour les mises à jour
+        serializer = ParticipantCreateSerializer(
+            instance, data=request.data, partial=partial, context=self.get_serializer_context())
+        serializer.is_valid(raise_exception=True)
+        
+        with transaction.atomic():
+            participant = serializer.save()
+            
+            # Mettre à jour l'utilisateur associé si l'email a changé
+            try:
+                User = get_user_model()
+                old_email = instance.email
+                new_email = participant.email
+                
+                if old_email != new_email:
+                    # Mettre à jour l'email de l'utilisateur existant
+                    try:
+                        user = User.objects.get(email=old_email)
+                        user.email = new_email
+                        user.first_name = participant.first_name
+                        user.last_name = participant.last_name
+                        user.save()
+                    except User.DoesNotExist:
+                        # Si pas d'utilisateur avec l'ancien email, créer un nouveau
+                        if not User.objects.filter(email=new_email).exists():
+                            username = new_email.split('@')[0]
+                            original_username = username
+                            counter = 1
+                            while User.objects.filter(username=username).exists():
+                                username = f"{original_username}_{counter}"
+                                counter += 1
+                            
+                            user = User.objects.create_user(
+                                username=username,
+                                email=new_email,
+                                first_name=participant.first_name,
+                                last_name=participant.last_name,
+                                password=None,
+                                is_active=False
+                            )
+            except Exception:
+                # En cas d'erreur, on continue sans échouer la mise à jour du participant
+                pass
+
+        # Retourner les données mises à jour avec QR
+        out = ParticipantSerializer(
+            participant, context=self.get_serializer_context()).data
+        
+        try:
+            out['qr_base64'] = serializer.get_qr_base64(participant)
+        except Exception:
+            out['qr_base64'] = None
+
+        try:
+            out['qr_url'] = serializer.get_qr_url(participant)
+        except Exception:
+            try:
+                if getattr(participant, "qr_code", None) and getattr(participant.qr_code, "url", None):
+                    out['qr_url'] = request.build_absolute_uri(participant.qr_code.url)
+                else:
+                    out['qr_url'] = None
+            except Exception:
+                out['qr_url'] = None
+
+        return Response(out)
+
+    def destroy(self, request, *args, **kwargs):
+        instance = self.get_object()
+        
+        # Supprimer l'utilisateur associé si il existe
+        try:
+            User = get_user_model()
+            user = User.objects.get(email=instance.email)
+            user.delete()
+        except User.DoesNotExist:
+            # Pas d'utilisateur associé, on continue
+            pass
+        except Exception:
+            # En cas d'erreur, on continue sans échouer la suppression du participant
+            pass
+        
+        self.perform_destroy(instance)
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
 
 class VerifyTicketAPIView(APIView):
@@ -264,3 +394,46 @@ class LogoutAPIView(APIView):
     def post(self, request):
         logout(request)
         return Response({"detail": "logged out"})
+
+
+class ActivateUserAPIView(APIView):
+    """
+    POST /api/activate-user/  -> { email, password }
+    Active un utilisateur créé automatiquement lors de l'inscription d'un participant.
+    """
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        email = request.data.get('email')
+        password = request.data.get('password')
+        
+        if not email or not password:
+            return Response(
+                {"detail": "email and password required"}, 
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        try:
+            User = get_user_model()
+            user = User.objects.get(email=email, is_active=False)
+            
+            # Définir le mot de passe et activer l'utilisateur
+            user.set_password(password)
+            user.is_active = True
+            user.save()
+            
+            return Response({
+                "detail": "User activated successfully",
+                "username": user.username
+            })
+            
+        except User.DoesNotExist:
+            return Response(
+                {"detail": "No inactive user found with this email"}, 
+                status=status.HTTP_404_NOT_FOUND
+            )
+        except Exception as e:
+            return Response(
+                {"detail": "Error activating user"}, 
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
