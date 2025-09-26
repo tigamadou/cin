@@ -6,6 +6,7 @@ import ParticipantDetail from "./pages/ParticipantDetail"
 import EditParticipant from "./pages/EditParticipant"
 import AddParticipant from "./pages/AddParticipant"
 import VerifyTicket from "./pages/VerifyTicket"
+import EventSettings from "./pages/EventSettings"
 import { api } from "./api"
 import RequireAdmin from "./components/RequireAdmin"
 import LoginPage from "./pages/LoginPage"
@@ -74,6 +75,14 @@ export default function App() {
             element={
               <RequireAdmin>
                 <VerifyTicket />
+              </RequireAdmin>
+            }
+          />
+          <Route
+            path="/settings"
+            element={
+              <RequireAdmin>
+                <EventSettings />
               </RequireAdmin>
             }
           />

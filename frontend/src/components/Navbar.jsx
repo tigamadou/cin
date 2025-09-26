@@ -105,6 +105,14 @@ export default function Navbar({ user }) {
           >
             Vérifier QR
           </Link>
+          {user?.is_staff && (
+            <Link
+              to="/settings"
+              className="text-sm text-gray-600 hover:text-gray-900"
+            >
+              Paramètres
+            </Link>
+          )}
         </div>
 
         <div className="flex items-center gap-4">

@@ -9,7 +9,8 @@ from django.utils import timezone
 import qrcode
 from rest_framework import serializers
 
-from .models import Participant, RegistrationSetting
+from .models import Participant, RegistrationSetting, EventSettings
+from .email_utils import send_participant_invitation_email, send_participant_update_email
 
 
 class QRMixin:
@@ -88,16 +89,19 @@ class ParticipantCreateSerializer(QRMixin, serializers.ModelSerializer):
         # Vérifier l'unicité de l'email
         email = attrs.get('email')
         if email:
-            # Vérifier si un participant avec cet email existe déjà
-            existing_participant = Participant.objects.filter(email=email)
-            # Si on est en mode update (instance existe), exclure l'instance actuelle
+            # Si on est en mode update (instance existe), empêcher la modification de l'email
             if self.instance:
-                existing_participant = existing_participant.exclude(pk=self.instance.pk)
-            
-            if existing_participant.exists():
-                raise serializers.ValidationError({
-                    'email': 'Un participant avec cet email existe déjà.'
-                })
+                if email != self.instance.email:
+                    raise serializers.ValidationError({
+                        'email': 'L\'email ne peut pas être modifié.'
+                    })
+            else:
+                # En mode création, vérifier l'unicité
+                existing_participant = Participant.objects.filter(email=email)
+                if existing_participant.exists():
+                    raise serializers.ValidationError({
+                        'email': 'Un participant avec cet email existe déjà.'
+                    })
         
         return attrs
 
@@ -128,24 +132,33 @@ class ParticipantCreateSerializer(QRMixin, serializers.ModelSerializer):
                 # participant reste créé — qr_code restera null
                 pass
 
-        # Envoi d'email best-effort avec pièce jointe
+        # Envoi d'email d'invitation avec template
         try:
             if participant.email:
-                subject = 'Votre billet / QR code'
-                body = (
-                    f"Bonjour {participant.first_name},\n\n"
-                    f"Merci pour votre inscription. Votre ticket: {participant.ticket_uuid}\n\n"
-                    "Veuillez trouver votre QR code en pièce jointe (si disponible).\n\n"
-                    "Un compte utilisateur a été créé automatiquement avec votre email. "
-                    "Vous pouvez l'activer en définissant un mot de passe via l'API d'activation."
-                )
-                email = EmailMessage(subject, body, to=[participant.email])
-                if qr_bytes:
-                    email.attach(f"{participant.ticket_uuid}.png",
-                                 qr_bytes, 'image/png')
-                email.send(fail_silently=True)
+                send_participant_invitation_email(participant, qr_bytes)
         except Exception:
             # fail_silently-like: on ignore l'erreur d'envoi
             pass
 
         return participant
+
+
+class EventSettingsSerializer(serializers.ModelSerializer):
+    """Serializer for EventSettings model."""
+    logo_url = serializers.SerializerMethodField()
+    
+    class Meta:
+        model = EventSettings
+        fields = ['event_name', 'event_description', 'venue', 'start_date', 'end_date', 'logo', 'logo_url', 'updated_at']
+        read_only_fields = ['updated_at']
+    
+    def get_logo_url(self, obj):
+        """Return the absolute URL for the logo image."""
+        if obj.logo and hasattr(obj.logo, 'url'):
+            from django.conf import settings
+            request = self.context.get('request')
+            if request:
+                return request.build_absolute_uri(obj.logo.url)
+            # Fallback to APP_DOMAIN setting
+            return f"{settings.APP_DOMAIN}{obj.logo.url}"
+        return None

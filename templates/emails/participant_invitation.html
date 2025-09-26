@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Invitation à l'événement</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 500px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f8f9fa;
+        }
+        .container {
+            background-color: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid #e9ecef;
+        }
+        .header h1 {
+            color: #2c3e50;
+            margin: 0;
+            font-size: 24px;
+        }
+        .qr-code {
+            text-align: center;
+            margin: 30px 0;
+            padding: 20px;
+            background-color: #f8f9fa;
+            border-radius: 8px;
+        }
+        .qr-code img {
+            max-width: 200px;
+            height: auto;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        .info {
+            margin: 20px 0;
+            padding: 15px;
+            background-color: #f8f9fa;
+            border-radius: 6px;
+        }
+        .info p {
+            margin: 8px 0;
+            color: #495057;
+        }
+        .footer {
+            text-align: center;
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 1px solid #e9ecef;
+            color: #6c757d;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            {% if logo_url %}
+            <div style="text-align: center; margin-bottom: 20px;">
+                <img src="{{ logo_url }}" alt="Logo de l'événement" style="max-height: 60px; max-width: 200px; object-fit: contain;">
+            </div>
+            {% endif %}
+            {% if is_update %}
+            <h1>📝 Mise à jour de votre invitation</h1>
+            {% else %}
+            <h1>🎉 Invitation à l'événement</h1>
+            {% endif %}
+        </div>
+
+        <p>Bonjour <strong>{{ participant.first_name }}</strong>,</p>
+
+        {% if qr_base64 %}
+        <div class="qr-code">
+            <img src="data:image/png;base64,{{ qr_base64 }}" alt="QR Code d'accès">
+            <p><strong>Votre billet d'entrée</strong></p>
+        </div>
+        {% endif %}
+
+        <div class="info">
+            <p><strong>Événement :</strong> {{ event_name|default:"Notre Événement" }}</p>
+            {% if venue %}
+            <p><strong>Lieu :</strong> {{ venue }}</p>
+            {% endif %}
+            {% if start_date %}
+            <p><strong>Début :</strong> {{ start_date|date:"d/m/Y à H:i" }}</p>
+            {% endif %}
+            {% if end_date %}
+            <p><strong>Fin :</strong> {{ end_date|date:"d/m/Y à H:i" }}</p>
+            {% endif %}
+            <p><strong>Date d'invitation :</strong> {{ participant.created_at|date:"d/m/Y à H:i" }}</p>
+        </div>
+
+        <p><strong>Instructions :</strong></p>
+        <ul>
+            <li>Présentez ce QR code à l'accueil</li>
+            <li>Arrivez à l'heure prévue</li>
+            <li>Conservez ce billet en sécurité</li>
+        </ul>
+
+        <div class="footer">
+            <p>L'équipe organisatrice</p>
+        </div>
+    </div>
+</body>
+</html>

@@ -4,8 +4,9 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import IsAdminUser, AllowAny
 
-from .serializers import ParticipantCreateSerializer, ParticipantSerializer
-from .models import Participant, RegistrationSetting
+from .serializers import ParticipantCreateSerializer, ParticipantSerializer, EventSettingsSerializer
+from .models import Participant, RegistrationSetting, EventSettings
+from .email_utils import send_participant_update_email
 from django.db import transaction
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth import get_user_model
@@ -169,41 +170,37 @@ class ParticipantRetrieveUpdateDestroyAPIView(generics.RetrieveUpdateDestroyAPIV
         with transaction.atomic():
             participant = serializer.save()
             
-            # Mettre à jour l'utilisateur associé si l'email a changé
+            # Mettre à jour l'utilisateur associé (email ne peut plus être modifié)
             try:
                 User = get_user_model()
-                old_email = instance.email
-                new_email = participant.email
-                
-                if old_email != new_email:
-                    # Mettre à jour l'email de l'utilisateur existant
-                    try:
-                        user = User.objects.get(email=old_email)
-                        user.email = new_email
-                        user.first_name = participant.first_name
-                        user.last_name = participant.last_name
-                        user.save()
-                    except User.DoesNotExist:
-                        # Si pas d'utilisateur avec l'ancien email, créer un nouveau
-                        if not User.objects.filter(email=new_email).exists():
-                            username = new_email.split('@')[0]
-                            original_username = username
-                            counter = 1
-                            while User.objects.filter(username=username).exists():
-                                username = f"{original_username}_{counter}"
-                                counter += 1
-                            
-                            user = User.objects.create_user(
-                                username=username,
-                                email=new_email,
-                                first_name=participant.first_name,
-                                last_name=participant.last_name,
-                                password=None,
-                                is_active=False
-                            )
+                # Mettre à jour les informations de l'utilisateur existant
+                try:
+                    user = User.objects.get(email=participant.email)
+                    user.first_name = participant.first_name
+                    user.last_name = participant.last_name
+                    user.save()
+                except User.DoesNotExist:
+                    # Si l'utilisateur n'existe pas, créer un nouvel utilisateur
+                    username = participant.email.split('@')[0]
+                    original_username = username
+                    counter = 1
+                    while User.objects.filter(username=username).exists():
+                        username = f"{original_username}_{counter}"
+                        counter += 1
+                    
+                    user = User.objects.create_user(
+                        username=username,
+                        email=participant.email,
+                        first_name=participant.first_name,
+                        last_name=participant.last_name,
+                        password=None,
+                        is_active=False
+                    )
             except Exception:
                 # En cas d'erreur, on continue sans échouer la mise à jour du participant
                 pass
+
+        # Email de mise à jour désactivé - pas d'envoi d'email lors des modifications
 
         # Retourner les données mises à jour avec QR
         out = ParticipantSerializer(
@@ -435,5 +432,37 @@ class ActivateUserAPIView(APIView):
         except Exception as e:
             return Response(
                 {"detail": "Error activating user"}, 
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
+
+class EventSettingsAPIView(APIView):
+    """API view to get and update event settings."""
+    permission_classes = [IsAdminUser]
+    
+    def get(self, request):
+        """Get current event settings."""
+        try:
+            settings = EventSettings.get_solo()
+            serializer = EventSettingsSerializer(settings)
+            return Response(serializer.data)
+        except Exception as e:
+            return Response(
+                {"detail": "Error retrieving event settings"}, 
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+    
+    def put(self, request):
+        """Update event settings."""
+        try:
+            settings = EventSettings.get_solo()
+            serializer = EventSettingsSerializer(settings, data=request.data, partial=True)
+            if serializer.is_valid():
+                serializer.save()
+                return Response(serializer.data)
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        except Exception as e:
+            return Response(
+                {"detail": "Error updating event settings"}, 
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )

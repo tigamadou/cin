@@ -7,7 +7,8 @@ from .views import (
     ToggleRegistrationAPIView,
     CurrentUserAPIView,
     CsrfTokenView, LoginAPIView, LogoutAPIView,
-    ActivateUserAPIView
+    ActivateUserAPIView,
+    EventSettingsAPIView
 )
 
 urlpatterns = [
@@ -30,4 +31,7 @@ urlpatterns = [
     path('login/', LoginAPIView.as_view(), name='login'),
     path('logout/', LogoutAPIView.as_view(), name='logout'),
     path('activate-user/', ActivateUserAPIView.as_view(), name='activate-user'),
+    
+    # event settings
+    path('event-settings/', EventSettingsAPIView.as_view(), name='event-settings'),
 ]

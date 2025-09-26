@@ -43,5 +43,13 @@ export const api = {
           : JSON.stringify({ is_open: Boolean(isOpen) })
     }),
 
-  currentUser: () => apiFetch(`${API_PREFIX}/current_user/`, { method: "GET" })
+  currentUser: () => apiFetch(`${API_PREFIX}/current_user/`, { method: "GET" }),
+
+  // Event settings
+  getEventSettings: () => apiFetch(`${API_PREFIX}/event-settings/`, { method: "GET" }),
+  updateEventSettings: (payload) =>
+    apiFetch(`${API_PREFIX}/event-settings/`, {
+      method: "PUT",
+      body: JSON.stringify(payload)
+    })
 }

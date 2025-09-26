@@ -64,27 +64,7 @@ export default function EditParticipant() {
     }
   }
 
-  // Check email uniqueness on blur (excluding current participant)
-  const handleEmailBlur = async () => {
-    const email = form.email.trim()
-    if (!email) return
-
-    try {
-      // Check if email already exists by trying to get participants
-      const participants = await api.listParticipants()
-      const existingParticipant = participants.data?.find(p => 
-        p.email.toLowerCase() === email.toLowerCase() && p.id !== parseInt(id)
-      )
-      
-      if (existingParticipant) {
-        setError("Un participant avec cet email existe déjà.")
-        setInvalidFields(new Set(['email']))
-      }
-    } catch (err) {
-      // Ignore errors during email check
-      console.warn("Email check failed:", err)
-    }
-  }
+  // Email field is disabled, no validation needed
 
   // helper: get CSS classes for input fields based on validation state
   const getInputClasses = (fieldKey) => {
@@ -100,11 +80,10 @@ export default function EditParticipant() {
     setError(null)
     setSaving(true)
 
-    // client-side validation - all fields are required
+    // client-side validation - all fields except email are required (email is disabled)
     const requiredFields = [
       { key: 'first_name', label: 'Prénom' },
       { key: 'last_name', label: 'Nom' },
-      { key: 'email', label: 'Email' },
       { key: 'phone', label: 'Téléphone' },
       { key: 'organization', label: 'Organisation' },
       { key: 'position', label: 'Poste' },
@@ -185,14 +164,13 @@ export default function EditParticipant() {
         </div>
 
         <input
-          required
           value={form.email}
-          onChange={(e) => update("email", e.target.value)}
-          onBlur={handleEmailBlur}
-          className={getInputClasses("email")}
+          className="w-full p-2 border border-gray-300 rounded bg-gray-100 cursor-not-allowed"
           placeholder="Email"
           type="email"
           aria-label="Email"
+          disabled
+          title="L'email ne peut pas être modifié"
         />
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">

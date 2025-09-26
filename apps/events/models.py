@@ -86,3 +86,26 @@ class RegistrationSetting(models.Model):
         obj, created = cls.objects.get_or_create(
             pk=1, defaults={'is_open': True})
         return obj
+
+
+class EventSettings(models.Model):
+    """
+    Singleton model to store event configuration.
+    Use get_solo() to access the single instance.
+    """
+    event_name = models.CharField("Nom de l'événement", max_length=200, default="Notre Événement")
+    event_description = models.TextField("Description de l'événement", blank=True)
+    venue = models.CharField("Lieu de l'événement", max_length=300, blank=True)
+    start_date = models.DateTimeField("Date et heure de début", null=True, blank=True)
+    end_date = models.DateTimeField("Date et heure de fin", null=True, blank=True)
+    logo = models.ImageField("Logo de l'événement", upload_to='event_logos/', null=True, blank=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"Event Settings: {self.event_name}"
+
+    @classmethod
+    def get_solo(cls) -> "EventSettings":
+        obj, created = cls.objects.get_or_create(
+            pk=1, defaults={'event_name': 'Notre Événement'})
+        return obj
