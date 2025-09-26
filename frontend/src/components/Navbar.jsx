@@ -94,24 +94,26 @@ export default function Navbar({ user }) {
       <div className="container mx-auto p-4 flex justify-between items-center">
         <div className="flex items-center gap-4">
           <Link to="/" className="text-xl font-semibold text-gray-800">
-            Event QR
-          </Link>
-          <Link to="/" className="text-sm text-gray-600 hover:text-gray-900">
-            Participants
-          </Link>
-          <Link
-            to="/verify"
-            className="text-sm text-gray-600 hover:text-gray-900"
-          >
-            Vérifier QR
+            Cin2025
           </Link>
           {user?.is_staff && (
-            <Link
-              to="/settings"
-              className="text-sm text-gray-600 hover:text-gray-900"
-            >
-              Paramètres
-            </Link>
+            <>
+              <Link to="/" className="text-sm text-gray-600 hover:text-gray-900">
+                Participants
+              </Link>
+              <Link
+                to="/verify"
+                className="text-sm text-gray-600 hover:text-gray-900"
+              >
+                Vérifier QR
+              </Link>
+              <Link
+                to="/settings"
+                className="text-sm text-gray-600 hover:text-gray-900"
+              >
+                Paramètres
+              </Link>
+            </>
           )}
         </div>
 

@@ -53,7 +53,7 @@ export default function LoginPage({ onLoginSuccess }) {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
+    <div className="h-50 flex items-center justify-center bg-gray-50 px-4">
       <div className="w-full max-w-sm bg-white rounded-xl shadow-md p-6">
         <h2 className="text-2xl font-bold text-center text-gray-800 mb-6">
           Connexion administrateur

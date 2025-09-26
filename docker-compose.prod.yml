@@ -1,0 +1,92 @@
+# CIN Event Management System - Production Configuration
+# =====================================================
+
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:14
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    restart: unless-stopped
+    networks:
+      - cin-network
+    # Production: pas d'exposition de port direct
+    # ports:
+    #   - "5432:5432"
+
+  web:
+    build: 
+      context: .
+      dockerfile: Dockerfile
+    domain: api.cin2025.com
+    command: gunicorn project.wsgi:application --bind 0.0.0.0:8000 --workers 3 --timeout 120
+    environment:
+      - DATABASE_URL=postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+      - SECRET_KEY=${SECRET_KEY}
+      - DEBUG=False
+      - ALLOWED_HOSTS=${ALLOWED_HOSTS}
+      - EMAIL_HOST=${EMAIL_HOST}
+      - EMAIL_PORT=${EMAIL_PORT}
+      - EMAIL_HOST_USER=${EMAIL_HOST_USER}
+      - EMAIL_HOST_PASSWORD=${EMAIL_HOST_PASSWORD}
+      - EMAIL_USE_TLS=${EMAIL_USE_TLS}
+      - EMAIL_USE_SSL=${EMAIL_USE_SSL}
+      - DEFAULT_FROM_EMAIL=${DEFAULT_FROM_EMAIL}
+      - APP_DOMAIN=${APP_DOMAIN}
+    volumes:
+      - ./media:/app/media
+      - ./staticfiles:/app/staticfiles
+    ports:
+      - "8000:8000"
+    depends_on:
+      - postgres
+    restart: unless-stopped
+    networks:
+      - cin-network
+    # Production: health check
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    domain: panel.cin2025.com
+    ports:
+      - "3000:80"
+    environment:
+      - VITE_API_URL=${API_URL:-http://localhost:8000}
+    depends_on:
+      - web
+    restart: unless-stopped
+    networks:
+      - cin-network
+
+  # redis:
+  #   image: redis:7-alpine
+  #   restart: unless-stopped
+  #   networks:
+  #     - cin-network
+  #   # Production: configuration Redis
+  #   command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD}
+  #   volumes:
+  #     - redis_data:/data
+
+volumes:
+  postgres_data:
+    driver: local
+  redis_data:
+    driver: local
+
+networks:
+  cin-network:
+    driver: bridge

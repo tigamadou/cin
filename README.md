@@ -68,12 +68,50 @@ make superuser
 4. `docker compose exec web python manage.py migrate`
 5. `docker compose exec web python manage.py createsuperuser`
 
+## Déploiement en production
+
+### Prérequis
+- Docker et Docker Compose installés
+- Caddy configuré pour le reverse proxy
+- Domaine configuré
+
+### Déploiement rapide
+```bash
+# 1. Cloner le dépôt
+git clone <repository-url>
+cd cin
+
+# 2. Configurer l'environnement de production
+cp env.prod.example .env.prod
+# Éditer .env.prod avec vos valeurs de production
+
+# 3. Déployer
+make deploy
+```
+
+### Configuration Caddy
+```caddy
+yourdomain.com {
+    reverse_proxy frontend:80
+}
+
+api.yourdomain.com {
+    reverse_proxy web:8000
+}
+```
+
 ## Services disponibles
 
+### Développement
 - **Django**: http://localhost:8000
-- **Frontend React**: http://localhost:5173
+- **Frontend React**: http://localhost:5173 (Vite dev server)
 - **Mailhog (emails)**: http://localhost:8025
 - **PostgreSQL**: localhost:5432
+
+### Production
+- **Frontend**: http://localhost:3000 (Nginx + React build)
+- **Backend API**: http://localhost:8000 (Gunicorn)
+- **Redis**: localhost:6379
 
 ## Commandes utiles (Makefile)
 

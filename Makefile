@@ -59,8 +59,18 @@ dev: ## Démarrer l'environnement de développement
 
 prod: ## Démarrer l'environnement de production
 	@echo "$(GREEN)🚀 Démarrage de l'environnement de production...$(NC)"
+	@if [ ! -f .env.prod ]; then \
+		echo "$(YELLOW)📝 Création du fichier .env.prod...$(NC)"; \
+		cp env.prod.example .env.prod; \
+		echo "$(YELLOW)⚠️  Veuillez éditer .env.prod avec vos valeurs de production.$(NC)"; \
+		exit 1; \
+	fi
 	$(DOCKER_COMPOSE) -f docker-compose.yml -f docker-compose.prod.yml up -d
 	@echo "$(GREEN)✅ Services de production démarrés!$(NC)"
+
+deploy: ## Déployer en production (script complet)
+	@echo "$(GREEN)🚀 Déploiement complet en production...$(NC)"
+	./deploy.sh
 
 setup: ## Configuration initiale (migrations + superuser)
 	@echo "$(YELLOW)🗄️ Exécution des migrations...$(NC)"
@@ -147,3 +157,15 @@ prod-restart: ## Redémarrage en mode production
 
 prod-stop: ## Arrêt en mode production
 	$(DOCKER_COMPOSE) -f docker-compose.yml -f docker-compose.prod.yml down
+
+prod-migrate: ## Exécuter les migrations en production
+	$(DOCKER_COMPOSE) -f docker-compose.yml -f docker-compose.prod.yml exec web python manage.py migrate
+
+prod-collectstatic: ## Collecter les fichiers statiques en production
+	$(DOCKER_COMPOSE) -f docker-compose.yml -f docker-compose.prod.yml exec web python manage.py collectstatic --noinput
+
+prod-shell: ## Ouvrir un shell Django en production
+	$(DOCKER_COMPOSE) -f docker-compose.yml -f docker-compose.prod.yml exec web python manage.py shell
+
+prod-status: ## Vérifier le statut des services de production
+	$(DOCKER_COMPOSE) -f docker-compose.yml -f docker-compose.prod.yml ps
