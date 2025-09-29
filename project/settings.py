@@ -110,15 +110,18 @@ APP_DOMAIN = os.getenv('APP_DOMAIN', 'http://localhost:8000')
 # CORS_ALLOW_ALL_ORIGINS = True
 # si tu utilises django-cors-headers:
 CORS_ALLOW_CREDENTIALS = True
-CORS_ALLOWED_ORIGINS = [
-    "http://127.0.0.1:5173",  # Vite
-    "http://localhost:5173",
-]
+# CORS_ALLOWED_ORIGINS = [
+#     "http://127.0.0.1:5173",  # Vite
+#     "http://localhost:5173",
+# ]
 # si tu utilises proxy (vite -> django) et front dans Docker, ajuste en conséquence
+
+CSRF_TRUSTED_ORIGINS = os.getenv('CSRF_TRUSTED_ORIGINS', '').split(',')
+CORS_ALLOWED_ORIGINS = os.getenv('CORS_ALLOWED_ORIGINS', '').split(',')
 
 # cookies (optionnel)
 SESSION_COOKIE_SAMESITE = "Lax"
 CSRF_COOKIE_SAMESITE = "Lax"
 # en dev tu peux garder secure=False; en prod secure=True
-SESSION_COOKIE_SECURE = False
-CSRF_COOKIE_SECURE = False
+SESSION_COOKIE_SECURE = True
+CSRF_COOKIE_SECURE = True

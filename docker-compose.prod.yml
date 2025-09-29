@@ -1,7 +1,7 @@
 # CIN Event Management System - Production Configuration
 # =====================================================
 
-version: '3.8'
+version: "3.8"
 
 services:
   postgres:
@@ -20,7 +20,7 @@ services:
     #   - "5432:5432"
 
   web:
-    build: 
+    build:
       context: .
       dockerfile: Dockerfile
     domain: api.cin2025.com
@@ -29,7 +29,9 @@ services:
       - DATABASE_URL=postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
       - SECRET_KEY=${SECRET_KEY}
       - DEBUG=False
-      - ALLOWED_HOSTS=${ALLOWED_HOSTS}
+      - ALLOWED_HOSTS=cin2025.bj,www.cin2025.bj,panel.cin2025.bj,www.panel.cin2025.bj
+      - CSRF_TRUSTED_ORIGINS=https://cin2025.bj,https://www.cin2025.bj,https://panel.cin2025.bj
+      - CORS_ALLOWED_ORIGINS=https://cin2025.bj,https://www.cin2025.bj,https://panel.cin2025.bj
       - EMAIL_HOST=${EMAIL_HOST}
       - EMAIL_PORT=${EMAIL_PORT}
       - EMAIL_HOST_USER=${EMAIL_HOST_USER}
@@ -37,7 +39,7 @@ services:
       - EMAIL_USE_TLS=${EMAIL_USE_TLS}
       - EMAIL_USE_SSL=${EMAIL_USE_SSL}
       - DEFAULT_FROM_EMAIL=${DEFAULT_FROM_EMAIL}
-      - APP_DOMAIN=${APP_DOMAIN}
+      - APP_DOMAIN=https://cin2025.bj
     volumes:
       - ./media:/app/media
       - ./staticfiles:/app/staticfiles
@@ -64,7 +66,7 @@ services:
     ports:
       - "3000:80"
     environment:
-      - VITE_API_URL=${API_URL:-http://localhost:8000}
+      - VITE_API_URL=https://api.cin2025.bj
     depends_on:
       - web
     restart: unless-stopped
