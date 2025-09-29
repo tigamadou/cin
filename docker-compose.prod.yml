@@ -23,7 +23,6 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    domain: api.cin2025.com
     command: gunicorn project.wsgi:application --bind 0.0.0.0:8000 --workers 3 --timeout 120
     environment:
       - DATABASE_URL=postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
@@ -62,11 +61,10 @@ services:
     build:
       context: ./frontend
       dockerfile: Dockerfile
-    domain: panel.cin2025.com
     ports:
       - "3000:80"
     environment:
-      - VITE_API_URL=https://api.cin2025.bj
+      - VITE_API_URL=${VITE_API_URL:-https://cin2025.bj/api}
     depends_on:
       - web
     restart: unless-stopped
