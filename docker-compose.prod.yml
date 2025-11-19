@@ -40,9 +40,9 @@ services:
       - DATABASE_URL=mysql://${MYSQL_USER}:${MYSQL_PASSWORD}@cin-db-prod:3306/${MYSQL_DATABASE}
       - SECRET_KEY=${SECRET_KEY}
       - DEBUG=False
-      - ALLOWED_HOSTS=cin2025.bj,www.cin2025.bj,panel.cin2025.bj,www.panel.cin2025.bj
-      - CSRF_TRUSTED_ORIGINS=https://cin2025.bj,https://www.cin2025.bj,https://panel.cin2025.bj
-      - CORS_ALLOWED_ORIGINS=https://cin2025.bj,https://www.cin2025.bj,https://panel.cin2025.bj
+      - ALLOWED_HOSTS=cin2025.bj,www.cin2025.bj,panel.cin2025.bj,www.panel.cin2025.bj,api.cin2025.bj,www.api.cin2025.bj
+      - CSRF_TRUSTED_ORIGINS=https://cin2025.bj,https://www.cin2025.bj,https://panel.cin2025.bj,https://api.cin2025.bj,https://www.api.cin2025.bj
+      - CORS_ALLOWED_ORIGINS=https://cin2025.bj,https://www.cin2025.bj,https://panel.cin2025.bj,https://api.cin2025.bj,https://www.api.cin2025.bj
       - EMAIL_HOST=${EMAIL_HOST}
       - EMAIL_PORT=${EMAIL_PORT}
       - EMAIL_HOST_USER=${EMAIL_HOST_USER}
