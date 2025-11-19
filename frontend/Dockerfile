@@ -1,35 +1,19 @@
-# Frontend Dockerfile - React + Vite (Production with Nginx)
-# ==========================================================
-
-# Build stage
-FROM node:22-alpine as build
-
-# Set working directory
+# ---------- build stage ----------
+FROM node:20.19.0-alpine AS build
 WORKDIR /app
 
-# Copy package files
-COPY package.json yarn.lock* ./
+ARG VITE_API_URL
+ENV VITE_API_URL=${VITE_API_URL}
 
-# Install dependencies
+COPY package.json yarn.lock ./
 RUN yarn install --frozen-lockfile
 
-# Copy source code
 COPY . .
-
-# Build the application
 RUN yarn build
 
-# Production stage
-FROM nginx:alpine
-
-# Copy built files to nginx
+# ---------- prod stage ----------
+FROM nginx:stable-alpine AS prod
+RUN rm -rf /usr/share/nginx/html/*
 COPY --from=build /app/dist /usr/share/nginx/html
-
-# Copy nginx configuration
-COPY nginx.conf /etc/nginx/conf.d/default.conf
-
-# Expose port 80
 EXPOSE 80
-
-# Start nginx
 CMD ["nginx", "-g", "daemon off;"]
