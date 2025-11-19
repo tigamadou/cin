@@ -1,7 +1,7 @@
 # CIN Event Management System - Makefile
 # =====================================
 
-.PHONY: help install dev prod setup migrate shell superuser logs clean restart test
+.PHONY: help install dev prod setup migrate shell superuser superuser-noninteractive logs clean restart test deploy deploy-full deploy-caddy
 
 # Couleurs pour les messages
 GREEN = \033[0;32m
@@ -29,6 +29,9 @@ install: ## Installation complète (développement)
 	else \
 		echo "$(GREEN)✅ Fichier .env existe déjà.$(NC)"; \
 	fi
+	@echo "$(YELLOW)🔧 Rendre les scripts de déploiement exécutables...$(NC)"
+	@chmod +x deploy.sh deploy-full.sh deploy-caddy.sh 2>/dev/null || true
+	@echo "$(GREEN)✅ Scripts de déploiement configurés!$(NC)"
 	@echo "$(YELLOW)🐳 Démarrage des services Docker...$(NC)"
 	$(DOCKER_COMPOSE) up -d
 	@echo "$(YELLOW)⏳ Attente que les services soient prêts...$(NC)"
@@ -70,13 +73,24 @@ prod: ## Démarrer l'environnement de production
 
 deploy: ## Déployer en production (script complet)
 	@echo "$(GREEN)🚀 Déploiement complet en production...$(NC)"
+	@chmod +x deploy.sh 2>/dev/null || true
 	./deploy.sh
+
+deploy-full: ## Déployer en production (script complet avec migrations)
+	@echo "$(GREEN)🚀 Déploiement complet en production avec migrations...$(NC)"
+	@chmod +x deploy-full.sh 2>/dev/null || true
+	./deploy-full.sh
+
+deploy-caddy: ## Déployer le Caddyfile en production
+	@echo "$(GREEN)🚀 Déploiement du Caddyfile en production...$(NC)"
+	@chmod +x deploy-caddy.sh 2>/dev/null || true
+	./deploy-caddy.sh
 
 setup: ## Configuration initiale (migrations + superuser)
 	@echo "$(YELLOW)🗄️ Exécution des migrations...$(NC)"
 	$(DOCKER_COMPOSE) exec web python manage.py migrate
 	@echo "$(YELLOW)👤 Création d'un superutilisateur...$(NC)"
-	$(DOCKER_COMPOSE) exec web python manage.py createsuperuser
+	@echo "$(YELLOW)💡 Utilisez 'make superuser' pour créer un superutilisateur interactivement$(NC)"
 
 migrate: ## Exécuter les migrations
 	@echo "$(YELLOW)🗄️ Exécution des migrations...$(NC)"
@@ -87,9 +101,28 @@ shell: ## Ouvrir un shell Django
 	@echo "$(GREEN)🐍 Ouverture du shell Django...$(NC)"
 	$(DOCKER_COMPOSE) exec web python manage.py shell
 
-superuser: ## Créer un superutilisateur
-	@echo "$(YELLOW)👤 Création d'un superutilisateur...$(NC)"
-	$(DOCKER_COMPOSE) exec web python manage.py createsuperuser
+superuser: ## Créer un superutilisateur (interactif)
+	@echo "$(YELLOW)👤 Création d'un superutilisateur (mode interactif)...$(NC)"
+	@echo "$(YELLOW)💡 Pour un mode non-interactif, utilisez: make superuser-noninteractive$(NC)"
+	$(DOCKER_COMPOSE) exec -it web python manage.py createsuperuser
+
+superuser-noninteractive: ## Créer un superutilisateur (non-interactif avec variables d'environnement)
+	@echo "$(YELLOW)👤 Création d'un superutilisateur (mode non-interactif)...$(NC)"
+	@if [ -f $(ENV_FILE) ]; then \
+		set -a; \
+		source $(ENV_FILE); \
+		set +a; \
+	fi
+	@if [ -z "$$DJANGO_SUPERUSER_USERNAME" ] || [ -z "$$DJANGO_SUPERUSER_PASSWORD" ]; then \
+		echo "$(RED)❌ Erreur: DJANGO_SUPERUSER_USERNAME et DJANGO_SUPERUSER_PASSWORD sont requis$(NC)"; \
+		echo "$(YELLOW)💡 Définissez-les dans votre fichier .env ou passez-les en ligne de commande:$(NC)"; \
+		echo "$(YELLOW)   DJANGO_SUPERUSER_USERNAME=admin DJANGO_SUPERUSER_EMAIL=admin@example.com DJANGO_SUPERUSER_PASSWORD=password make superuser-noninteractive$(NC)"; \
+		exit 1; \
+	fi
+	@DJANGO_SUPERUSER_USERNAME="$$DJANGO_SUPERUSER_USERNAME" \
+	 DJANGO_SUPERUSER_EMAIL="$$DJANGO_SUPERUSER_EMAIL" \
+	 DJANGO_SUPERUSER_PASSWORD="$$DJANGO_SUPERUSER_PASSWORD" \
+	 $(DOCKER_COMPOSE) exec -T web python scripts/create_superuser.py
 
 logs: ## Afficher les logs des services
 	@echo "$(GREEN)📋 Affichage des logs...$(NC)"
@@ -150,22 +183,43 @@ dev-stop: stop ## Alias pour stop
 
 # Commandes de production
 prod-logs: ## Logs en mode production
-	$(DOCKER_COMPOSE) -f docker-compose.yml -f docker-compose.prod.yml logs -f
+	$(DOCKER_COMPOSE) -f docker-compose.prod.yml logs -f
 
 prod-restart: ## Redémarrage en mode production
-	$(DOCKER_COMPOSE) -f docker-compose.yml -f docker-compose.prod.yml restart
+	$(DOCKER_COMPOSE) -f docker-compose.prod.yml restart
 
 prod-stop: ## Arrêt en mode production
-	$(DOCKER_COMPOSE) -f docker-compose.yml -f docker-compose.prod.yml down
+	$(DOCKER_COMPOSE) -f docker-compose.prod.yml down
 
 prod-migrate: ## Exécuter les migrations en production
-	$(DOCKER_COMPOSE) -f docker-compose.yml -f docker-compose.prod.yml exec web python manage.py migrate
+	$(DOCKER_COMPOSE) -f docker-compose.prod.yml exec cin-api python manage.py migrate
 
 prod-collectstatic: ## Collecter les fichiers statiques en production
-	$(DOCKER_COMPOSE) -f docker-compose.yml -f docker-compose.prod.yml exec web python manage.py collectstatic --noinput
+	$(DOCKER_COMPOSE) -f docker-compose.prod.yml exec cin-api python manage.py collectstatic --noinput
 
 prod-shell: ## Ouvrir un shell Django en production
-	$(DOCKER_COMPOSE) -f docker-compose.yml -f docker-compose.prod.yml exec web python manage.py shell
+	$(DOCKER_COMPOSE) -f docker-compose.prod.yml exec cin-api python manage.py shell
 
 prod-status: ## Vérifier le statut des services de production
-	$(DOCKER_COMPOSE) -f docker-compose.yml -f docker-compose.prod.yml ps
+	$(DOCKER_COMPOSE) -f docker-compose.prod.yml ps
+
+prod-superuser: ## Créer un superutilisateur en production (interactif)
+	@echo "$(YELLOW)👤 Création d'un superutilisateur en production (mode interactif)...$(NC)"
+	$(DOCKER_COMPOSE) -f docker-compose.prod.yml exec -it cin-api python manage.py createsuperuser
+
+prod-superuser-noninteractive: ## Créer un superutilisateur en production (non-interactif)
+	@echo "$(YELLOW)👤 Création d'un superutilisateur en production (mode non-interactif)...$(NC)"
+	@if [ -f .env.prod ]; then \
+		set -a; \
+		source .env.prod; \
+		set +a; \
+	fi
+	@if [ -z "$$DJANGO_SUPERUSER_USERNAME" ] || [ -z "$$DJANGO_SUPERUSER_PASSWORD" ]; then \
+		echo "$(RED)❌ Erreur: DJANGO_SUPERUSER_USERNAME et DJANGO_SUPERUSER_PASSWORD sont requis$(NC)"; \
+		echo "$(YELLOW)💡 Définissez-les dans votre fichier .env.prod ou passez-les en ligne de commande$(NC)"; \
+		exit 1; \
+	fi
+	@DJANGO_SUPERUSER_USERNAME="$$DJANGO_SUPERUSER_USERNAME" \
+	 DJANGO_SUPERUSER_EMAIL="$$DJANGO_SUPERUSER_EMAIL" \
+	 DJANGO_SUPERUSER_PASSWORD="$$DJANGO_SUPERUSER_PASSWORD" \
+	 $(DOCKER_COMPOSE) -f docker-compose.prod.yml exec -T cin-api python scripts/create_superuser.py

@@ -34,7 +34,7 @@ services:
     image: node:20-bullseye
     working_dir: /app
     environment:
-      - VITE_API_URL=${API_URL:-http://localhost:8000}
+      - VITE_API_URL=${API_DOMAIN:-${API_URL:-http://localhost:8000}}
     volumes:
       - ./frontend:/app
       - /app/node_modules

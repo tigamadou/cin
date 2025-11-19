@@ -1,43 +1,40 @@
 import { apiFetch } from "./utils/apiFetch"
-
-// Use environment variable for API URL, fallback to relative path
-const API_BASE_URL = import.meta.env.VITE_API_URL || ""
-const API_PREFIX = `${API_BASE_URL}/api`
+import { getApiUrl } from "./utils/apiConfig"
 
 export const api = {
   listParticipants: () =>
-    apiFetch(`${API_PREFIX}/participants/`, { method: "GET" }),
+    apiFetch(getApiUrl("participants/"), { method: "GET" }),
 
   getParticipant: (id) =>
-    apiFetch(`${API_PREFIX}/participants/${encodeURIComponent(id)}/`, {
+    apiFetch(getApiUrl(`participants/${encodeURIComponent(id)}/`), {
       method: "GET"
     }),
 
   createParticipant: (payload) =>
-    apiFetch(`${API_PREFIX}/participants/`, {
+    apiFetch(getApiUrl("participants/"), {
       method: "POST",
       body: JSON.stringify(payload)
     }),
 
   updateParticipant: (id, payload) =>
-    apiFetch(`${API_PREFIX}/participants/${encodeURIComponent(id)}/`, {
+    apiFetch(getApiUrl(`participants/${encodeURIComponent(id)}/`), {
       method: "PUT",
       body: JSON.stringify(payload)
     }),
 
   deleteParticipant: (id) =>
-    apiFetch(`${API_PREFIX}/participants/${encodeURIComponent(id)}/`, {
+    apiFetch(getApiUrl(`participants/${encodeURIComponent(id)}/`), {
       method: "DELETE"
     }),
 
   verifyTicket: (payload) =>
-    apiFetch(`${API_PREFIX}/verify/`, {
+    apiFetch(getApiUrl("verify/"), {
       method: "POST",
       body: JSON.stringify(payload)
     }),
 
   toggleRegistration: (isOpen) =>
-    apiFetch(`${API_PREFIX}/toggle-registration/`, {
+    apiFetch(getApiUrl("toggle-registration/"), {
       method: "POST",
       body:
         isOpen === undefined
@@ -45,12 +42,12 @@ export const api = {
           : JSON.stringify({ is_open: Boolean(isOpen) })
     }),
 
-  currentUser: () => apiFetch(`${API_PREFIX}/current_user/`, { method: "GET" }),
+  currentUser: () => apiFetch(getApiUrl("current_user/"), { method: "GET" }),
 
   // Event settings
-  getEventSettings: () => apiFetch(`${API_PREFIX}/event-settings/`, { method: "GET" }),
+  getEventSettings: () => apiFetch(getApiUrl("event-settings/"), { method: "GET" }),
   updateEventSettings: (payload) =>
-    apiFetch(`${API_PREFIX}/event-settings/`, {
+    apiFetch(getApiUrl("event-settings/"), {
       method: "PUT",
       body: JSON.stringify(payload)
     })

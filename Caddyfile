@@ -1,0 +1,52 @@
+{
+	# Global options if needed
+}
+
+# --------------------------------------------
+# MAIN SITE (unchanged)
+# --------------------------------------------
+cin2025.bj, www.cin2025.bj {
+	root * /var/www/cin2025
+
+	encode gzip zstd
+
+	try_files {path} /index.html
+
+	file_server {
+		hide /etc/caddy/Caddyfile
+	}
+}
+
+# --------------------------------------------
+# PANEL → cin-frontend (host port 3000)
+# --------------------------------------------
+panel.cin2025.bj, www.panel.cin2025.bj {
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+	}
+
+	# Caddy outside Docker → use localhost
+	reverse_proxy localhost:3000
+}
+
+# --------------------------------------------
+# API → cin-api (host port 8000)
+# --------------------------------------------
+api.cin2025.bj {
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+	}
+
+	reverse_proxy localhost:8000
+}
+
+# --------------------------------------------
+# PHPMYADMIN → cin-phpmyadmin (host port 5050)
+# --------------------------------------------
+pma.cin2025.bj {
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+	}
+
+	reverse_proxy localhost:5050
+}

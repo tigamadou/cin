@@ -1,0 +1,43 @@
+{
+	# Global options can go here if needed
+}
+
+# --------------------------------------------
+# Panel (port 3000)
+# --------------------------------------------
+panel.cin2025.bj, www.panel.cin2025.bj {
+	# Security headers
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+	}
+
+	# Reverse proxy to Node app
+	reverse_proxy :3000
+}
+
+# --------------------------------------------
+# Main site (static files + SPA rewrite)
+# --------------------------------------------
+cin2025.bj, www.cin2025.bj {
+	root * /var/www/cin2025
+
+	encode gzip zstd
+
+	# Try to serve files, else fallback to index.html
+	try_files {path} /index.html
+
+	file_server {
+		hide /etc/caddy/Caddyfile
+	}
+}
+
+# --------------------------------------------
+# API (port 8000)
+# --------------------------------------------
+api.cin2025.bj {
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+	}
+
+	reverse_proxy :8000
+}

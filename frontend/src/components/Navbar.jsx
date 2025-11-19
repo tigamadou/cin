@@ -3,6 +3,7 @@ import React, { useEffect, useState } from "react"
 import { Link, useNavigate } from "react-router-dom"
 import { api } from "../api"
 import { apiFetch } from "../utils/apiFetch"
+import { getApiUrl } from "../utils/apiConfig"
 
 export default function Navbar({ user }) {
   const navigate = useNavigate()
@@ -31,7 +32,7 @@ export default function Navbar({ user }) {
           if (mounted) setRegOpen(Boolean(payload?.is_open))
         } else {
           // fallback: GET /api/toggle-registration/
-          const res = await apiFetch("/api/toggle-registration/", {
+          const res = await apiFetch(getApiUrl("toggle-registration/"), {
             method: "GET"
           })
           const payload = res?.data ?? res
@@ -62,7 +63,7 @@ export default function Navbar({ user }) {
         res = await api.toggleRegistration()
       } else {
         // fallback: POST to toggle endpoint (server toggles if no body)
-        res = await apiFetch("/api/toggle-registration/", { method: "POST" })
+        res = await apiFetch(getApiUrl("toggle-registration/"), { method: "POST" })
       }
       const payload = res?.data ?? res
       setRegOpen(Boolean(payload?.is_open))
@@ -79,7 +80,7 @@ export default function Navbar({ user }) {
       if (api && typeof api.logout === "function") {
         await api.logout()
       } else {
-        await apiFetch("/api/logout/", { method: "POST" })
+        await apiFetch(getApiUrl("logout/"), { method: "POST" })
       }
     } catch (err) {
       console.warn("logout failed", err)

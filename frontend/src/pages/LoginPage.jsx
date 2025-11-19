@@ -1,10 +1,6 @@
 import React, { useState, useEffect } from "react"
-
-// helper pour lire cookie (csrftoken)
-function getCookie(name) {
-  const m = document.cookie.match("(^|;)\\s*" + name + "\\s*=\\s*([^;]+)")
-  return m ? m.pop() : ""
-}
+import { getApiUrl } from "../utils/apiConfig"
+import { getCookie } from "../utils/cookies"
 
 export default function LoginPage({ onLoginSuccess }) {
   const [username, setUsername] = useState("")
@@ -15,7 +11,7 @@ export default function LoginPage({ onLoginSuccess }) {
 
   // demander le cookie CSRF au chargement
   useEffect(() => {
-    fetch("/api/csrf/", { credentials: "include" })
+    fetch(getApiUrl("csrf/"), { credentials: "include" })
       .then((r) => r.json())
       .then((j) => {
         const token = getCookie("csrftoken") || j.csrfToken
@@ -29,7 +25,7 @@ export default function LoginPage({ onLoginSuccess }) {
     setError(null)
     setLoading(true)
     try {
-      const resp = await fetch("/api/login/", {
+      const resp = await fetch(getApiUrl("login/"), {
         method: "POST",
         credentials: "include",
         headers: {
