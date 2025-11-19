@@ -10,9 +10,21 @@ import EventSettings from "./pages/EventSettings"
 import { api } from "./api"
 import RequireAdmin from "./components/RequireAdmin"
 import LoginPage from "./pages/LoginPage"
+import { getApiUrl } from "./utils/apiConfig"
 
 export default function App() {
   const [user, setUser] = useState(null)
+
+  // Fetch CSRF token on app load
+  useEffect(() => {
+    // Fetch CSRF token to ensure it's available for all requests
+    fetch(getApiUrl("csrf/"), { credentials: "include" })
+      .then((r) => r.json())
+      .catch(() => {
+        // Silently fail - CSRF token might be set via cookie
+        console.warn("CSRF token fetch failed, will rely on cookie")
+      })
+  }, [])
 
   useEffect(() => {
     let active = true

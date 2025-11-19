@@ -142,3 +142,8 @@ CSRF_COOKIE_SAMESITE = "Lax"
 # en dev tu peux garder secure=False; en prod secure=True
 SESSION_COOKIE_SECURE = True
 CSRF_COOKIE_SECURE = True
+
+# Cookie domain for cross-subdomain support (e.g., cin2025.bj and api.cin2025.bj)
+# Set to .domain.com to allow cookies across all subdomains
+CSRF_COOKIE_DOMAIN = os.getenv('CSRF_COOKIE_DOMAIN', None)  # None = current domain only
+SESSION_COOKIE_DOMAIN = os.getenv('SESSION_COOKIE_DOMAIN', None)  # None = current domain only
