@@ -46,9 +46,21 @@ export const api = {
 
   // Event settings
   getEventSettings: () => apiFetch(getApiUrl("event-settings/"), { method: "GET" }),
-  updateEventSettings: (payload) =>
-    apiFetch(getApiUrl("event-settings/"), {
+  updateEventSettings: (payload) => {
+    // Handle FormData (for file uploads) or JSON payload
+    const isFormData = payload instanceof FormData
+    const options = {
       method: "PUT",
-      body: JSON.stringify(payload)
-    })
+      body: isFormData ? payload : JSON.stringify(payload)
+    }
+    
+    // Don't set Content-Type for FormData (browser will set it with boundary)
+    if (!isFormData) {
+      options.headers = {
+        "Content-Type": "application/json"
+      }
+    }
+    
+    return apiFetch(getApiUrl("event-settings/"), options)
+  }
 }

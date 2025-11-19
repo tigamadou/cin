@@ -13,7 +13,9 @@ services:
       MYSQL_PASSWORD: ${MYSQL_PASSWORD}
       MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
     volumes:
-      - mysql_data:/var/lib/mysql
+      # External folder for MySQL data - persists even if container/volume is deleted
+      # Using ~/data/mysql to store data in home directory, separate from application code
+      - ~/data/cin/mysql:/var/lib/mysql
       # Init script creates user with '%' host for Docker network access
       - ./mysql/init-grant-user.sh:/docker-entrypoint-initdb.d/01-grant-user.sh:ro
     restart: unless-stopped
@@ -53,11 +55,14 @@ services:
       - EMAIL_USE_SSL=${EMAIL_USE_SSL}
       - DEFAULT_FROM_EMAIL=${DEFAULT_FROM_EMAIL}
       - APP_DOMAIN=https://cin2025.bj
+      - API_DOMAIN=https://api.cin2025.bj
       - DJANGO_SUPERUSER_USERNAME=${DJANGO_SUPERUSER_USERNAME}
       - DJANGO_SUPERUSER_PASSWORD=${DJANGO_SUPERUSER_PASSWORD}
       - DJANGO_SUPERUSER_EMAIL=${DJANGO_SUPERUSER_EMAIL}
     volumes:
-      - ./media:/app/media
+      # External folder for Django media files - persists even if container/volume is deleted
+      # Using ~/data/cin/media to store media files in home directory, separate from application code
+      - ~/data/cin/media:/app/media
       - ./staticfiles:/app/staticfiles
     ports:
       - "8000:8000"
@@ -107,9 +112,15 @@ services:
     environment:
       PMA_HOST: cin-db-prod
       PMA_PORT: 3306
-      PMA_USER: ${MYSQL_USER}
-      PMA_PASSWORD: ${MYSQL_PASSWORD}
+      # phpMyAdmin login credentials (separate from MySQL user for security)
+      PMA_USER: ${PHPMYADMIN_USER:-${MYSQL_USER}}
+      PMA_PASSWORD: ${PHPMYADMIN_PASSWORD:-${MYSQL_PASSWORD}}
+      # MySQL root password (for advanced operations)
       MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      # Allow arbitrary server connections (optional, set to 0 to disable)
+      PMA_ARBITRARY: 0
+      # Absolute URI for phpMyAdmin (set if behind reverse proxy)
+      # PMA_ABSOLUTE_URI: https://pma.cin2025.bj
     ports:
       - "5050:80"
     depends_on:
@@ -118,11 +129,14 @@ services:
     networks:
       - cin-network
 
-volumes:
-  mysql_data:
-    driver: local
-  redis_data:
-    driver: local
+# Note: Using external folders (~/data/cin/mysql and ~/data/cin/media) in home directory
+# This ensures data persists even if containers or volumes are deleted
+# Data is stored separately from application code in ~/data/cin/
+# volumes:
+#   mysql_data:
+#     driver: local
+#   redis_data:
+#     driver: local
 
 networks:
   cin-network:

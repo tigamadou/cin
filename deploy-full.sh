@@ -62,11 +62,12 @@ ssh "$REMOTE_HOST" << 'ENDSSH'
         cp .env.prod .env.prod.backup
     fi
     
-    # Remove all files and directories except .env.prod (deploy scripts are not uploaded, so remove any existing .sh files)
-    find . -mindepth 1 -maxdepth 1 ! -name '.env.prod' ! -name '.env.prod.backup' -exec rm -rf {} +
-    
-    # Explicitly remove any .sh files (they should not be on the server)
-    find . -maxdepth 1 -name '*.sh' -delete 2>/dev/null || true
+    # Create data directories in home directory if they don't exist
+    # Data is stored in ~/data/cin/ to separate it from application code
+    mkdir -p ~/data/cin/mysql
+    mkdir -p ~/data/cin/media
+    chmod 755 ~/data/cin/mysql ~/data/cin/media 2>/dev/null || true
+    echo "[INFO] Data directories ensured (~/data/cin/mysql and ~/data/cin/media)"
     
     # Restore .env.prod from backup if it existed
     if [ -f .env.prod.backup ]; then
@@ -107,10 +108,19 @@ else
     fi
 fi
 
-# Step 4: Restart Docker services
-print_step "Step 4/5: Restarting Docker services..."
+# Step 4: Rename docker-compose file and restart Docker services
+print_step "Step 4/5: Setting up docker-compose.yml and restarting Docker services..."
 ssh "$REMOTE_HOST" << 'ENDSSH'
     cd /root/cin
+    
+    # Rename docker-compose.prod.yml to docker-compose.yml for simpler usage
+    if [ -f docker-compose.prod.yml ]; then
+        echo "[INFO] Renaming docker-compose.prod.yml to docker-compose.yml"
+        mv docker-compose.prod.yml docker-compose.yml
+    elif [ ! -f docker-compose.yml ]; then
+        echo "[ERROR] docker-compose.prod.yml not found and docker-compose.yml doesn't exist!"
+        exit 1
+    fi
     
     if ! command -v docker &> /dev/null || ! command -v docker compose &> /dev/null; then
         echo "[ERROR] Docker or Docker Compose not found!"
@@ -118,17 +128,17 @@ ssh "$REMOTE_HOST" << 'ENDSSH'
     fi
     
     echo "[INFO] Stopping existing services..."
-    docker compose -f docker-compose.prod.yml down || true
+    docker compose down || true
     
     echo "[INFO] Building and starting services..."
-    docker compose -f docker-compose.prod.yml up -d --build
+    docker compose up -d --build
     
     echo "[INFO] Waiting for MySQL to be ready..."
     # Wait for MySQL healthcheck to pass
     timeout=60
     elapsed=0
     while [ $elapsed -lt $timeout ]; do
-        if docker compose -f docker-compose.prod.yml exec -T cin-db mysqladmin ping -h localhost -u root -p"${MYSQL_ROOT_PASSWORD}" --silent 2>/dev/null; then
+        if docker compose exec -T cin-db mysqladmin ping -h localhost -u root -p"${MYSQL_ROOT_PASSWORD}" --silent 2>/dev/null; then
             echo "[INFO] MySQL is ready!"
             break
         fi
@@ -150,7 +160,7 @@ ssh "$REMOTE_HOST" << 'ENDSSH'
         set +a
         
         # Grant permissions to user from any Docker network host
-        docker compose -f docker-compose.prod.yml exec -T cin-db mysql -u root -p"${MYSQL_ROOT_PASSWORD}" << SQL || {
+        docker compose exec -T cin-db mysql -u root -p"${MYSQL_ROOT_PASSWORD}" << SQL || {
             echo "[WARN] Failed to grant MySQL permissions (may already be granted)"
         }
 CREATE USER IF NOT EXISTS '${MYSQL_USER}'@'%' IDENTIFIED BY '${MYSQL_PASSWORD}';
@@ -176,18 +186,18 @@ ssh "$REMOTE_HOST" << 'ENDSSH'
     cd /root/cin
     
     echo "[INFO] Running database migrations..."
-    docker compose -f docker-compose.prod.yml exec -T cin-api python manage.py migrate --noinput || {
+    docker compose exec -T cin-api python manage.py migrate --noinput || {
         echo "[ERROR] Migrations failed!"
         exit 1
     }
     
     echo "[INFO] Collecting static files..."
-    docker compose -f docker-compose.prod.yml exec -T cin-api python manage.py collectstatic --noinput || {
+    docker compose exec -T cin-api python manage.py collectstatic --noinput || {
         echo "[WARN] Static files collection failed (may be normal if no changes)"
     }
     
     echo "[INFO] Checking service status..."
-    docker compose -f docker-compose.prod.yml ps
+    docker compose ps
 ENDSSH
 
 if [ $? -eq 0 ]; then

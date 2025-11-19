@@ -39,7 +39,7 @@ def send_participant_invitation_email(participant, qr_bytes=None):
             'venue': event_settings.venue,
             'start_date': event_settings.start_date,
             'end_date': event_settings.end_date,
-            'logo_url': f"{settings.APP_DOMAIN}{event_settings.logo.url}" if event_settings.logo else None,
+            'logo_url': f"{settings.API_DOMAIN}{event_settings.logo.url}" if event_settings.logo else None,
         }
         
         # Render email templates
@@ -128,7 +128,7 @@ def send_participant_update_email(participant, qr_bytes=None):
             'venue': event_settings.venue,
             'start_date': event_settings.start_date,
             'end_date': event_settings.end_date,
-            'logo_url': f"{settings.APP_DOMAIN}{event_settings.logo.url}" if event_settings.logo else None,
+            'logo_url': f"{settings.API_DOMAIN}{event_settings.logo.url}" if event_settings.logo else None,
         }
         
         # Render email templates

@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { api } from '../api'
-import { apiFetch } from '../utils/apiFetch'
 
 const EventSettings = () => {
   const [settings, setSettings] = useState({
@@ -90,11 +89,8 @@ const EventSettings = () => {
       if (settings.end_date) formData.append('end_date', settings.end_date)
       if (settings.logo) formData.append('logo', settings.logo)
 
-      // Use apiFetch for proper CSRF handling
-      const response = await apiFetch('/api/event-settings/', {
-        method: 'PUT',
-        body: formData
-      })
+      // Use api.updateEventSettings for proper API URL handling and CSRF
+      const response = await api.updateEventSettings(formData)
 
       setSettings(prev => ({
         ...prev,

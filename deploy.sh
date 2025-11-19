@@ -72,8 +72,12 @@ if [ "$SKIP_CLEAN" = false ]; then
             cp .env.prod .env.prod.backup
         fi
         
-        # Remove all files and directories except .env.prod
-        find . -mindepth 1 -maxdepth 1 ! -name '.env.prod' ! -name '.env.prod.backup' -exec rm -rf {} +
+        # Create data directories in home directory if they don't exist
+        # Data is stored in ~/data/cin/ to separate it from application code
+        mkdir -p ~/data/cin/mysql
+        mkdir -p ~/data/cin/media
+        chmod 755 ~/data/cin/mysql ~/data/cin/media 2>/dev/null || true
+        echo "[INFO] Data directories ensured (~/data/cin/mysql and ~/data/cin/media)"
         
         # Restore .env.prod from backup if it existed
         if [ -f .env.prod.backup ]; then
@@ -119,6 +123,7 @@ rsync -avz --progress \
     --exclude='.coverage' \
     --exclude='htmlcov/' \
     --exclude='media/qr_codes/' \
+    --exclude='data/' \
     --exclude='staticfiles/' \
     --exclude='pgadmin/' \
     --exclude='*.sh' \
@@ -132,8 +137,8 @@ else
     exit 1
 fi
 
-# Ensure .env file exists (create from .env.prod if needed)
-print_info "Ensuring .env file exists..."
+# Ensure .env file exists and rename docker-compose file
+print_info "Ensuring .env file exists and setting up docker-compose.yml..."
 ssh "$REMOTE_HOST" << 'ENDSSH'
     cd /root/cin
     
@@ -145,18 +150,26 @@ ssh "$REMOTE_HOST" << 'ENDSSH'
         echo "[WARN] .env.prod file not found. Please upload it manually for security."
     fi
     
+    # Rename docker-compose.prod.yml to docker-compose.yml for simpler usage
+    if [ -f docker-compose.prod.yml ]; then
+        echo "[INFO] Renaming docker-compose.prod.yml to docker-compose.yml"
+        mv docker-compose.prod.yml docker-compose.yml
+    elif [ ! -f docker-compose.yml ]; then
+        echo "[WARN] docker-compose.prod.yml not found. docker-compose.yml may not exist."
+    fi
+    
     # Check Docker and Docker Compose
-    if command -v docker &> /dev/null && command -v docker-compose &> /dev/null; then
+    if command -v docker &> /dev/null && command -v docker compose &> /dev/null; then
         echo "[INFO] Docker and Docker Compose are available"
         
         # Optionally restart services (uncomment if needed)
         # echo "[INFO] Restarting Docker services..."
-        # docker compose -f docker-compose.prod.yml down
-        # docker compose -f docker-compose.prod.yml up -d --build
+        # docker compose down
+        # docker compose up -d --build
         
         # Optionally run migrations (uncomment if needed)
         # echo "[INFO] Running database migrations..."
-        # docker compose -f docker-compose.prod.yml exec -T cin-api python manage.py migrate --noinput
+        # docker compose exec -T cin-api python manage.py migrate --noinput
     else
         echo "[WARN] Docker or Docker Compose not found on remote server"
     fi
@@ -165,7 +178,7 @@ ENDSSH
 print_info "Deployment completed successfully!"
 print_warn "Remember to:"
 print_warn "  1. Upload .env.prod file separately (for security)"
-print_warn "  2. Run migrations: docker compose -f docker-compose.prod.yml exec cin-api python manage.py migrate"
-print_warn "  3. Restart services: docker compose -f docker-compose.prod.yml up -d --build"
-print_warn "  4. Collect static files: docker compose -f docker-compose.prod.yml exec cin-api python manage.py collectstatic --noinput"
+print_warn "  2. Run migrations: docker compose exec cin-api python manage.py migrate"
+print_warn "  3. Restart services: docker compose up -d --build"
+print_warn "  4. Collect static files: docker compose exec cin-api python manage.py collectstatic --noinput"
 

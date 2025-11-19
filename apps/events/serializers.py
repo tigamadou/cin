@@ -160,5 +160,5 @@ class EventSettingsSerializer(serializers.ModelSerializer):
             if request:
                 return request.build_absolute_uri(obj.logo.url)
             # Fallback to APP_DOMAIN setting
-            return f"{settings.APP_DOMAIN}{obj.logo.url}"
+            return f"{settings.API_DOMAIN}{obj.logo.url}"
         return None

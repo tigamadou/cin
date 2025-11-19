@@ -13,7 +13,16 @@ RUN yarn build
 
 # ---------- prod stage ----------
 FROM nginx:stable-alpine AS prod
+
+# Remove default nginx configuration
+RUN rm -rf /etc/nginx/conf.d/default.conf
+
+# Copy nginx configuration for React SPA routing
+COPY nginx.conf /etc/nginx/conf.d/default.conf
+
+# Copy built files
 RUN rm -rf /usr/share/nginx/html/*
 COPY --from=build /app/dist /usr/share/nginx/html
+
 EXPOSE 80
 CMD ["nginx", "-g", "daemon off;"]

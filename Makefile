@@ -1,7 +1,7 @@
 # CIN Event Management System - Makefile
 # =====================================
 
-.PHONY: help install dev prod setup migrate shell superuser superuser-noninteractive logs clean restart test deploy deploy-full deploy-caddy
+.PHONY: help install dev prod setup setup-data-dirs migrate shell superuser superuser-noninteractive logs clean restart test deploy deploy-full deploy-caddy
 
 # Couleurs pour les messages
 GREEN = \033[0;32m
@@ -30,7 +30,7 @@ install: ## Installation complète (développement)
 		echo "$(GREEN)✅ Fichier .env existe déjà.$(NC)"; \
 	fi
 	@echo "$(YELLOW)🔧 Rendre les scripts de déploiement exécutables...$(NC)"
-	@chmod +x deploy.sh deploy-full.sh deploy-caddy.sh 2>/dev/null || true
+	@chmod +x deploy.sh deploy-full.sh deploy-caddy.sh setup-data-dirs.sh 2>/dev/null || true
 	@echo "$(GREEN)✅ Scripts de déploiement configurés!$(NC)"
 	@echo "$(YELLOW)🐳 Démarrage des services Docker...$(NC)"
 	$(DOCKER_COMPOSE) up -d
@@ -68,7 +68,11 @@ prod: ## Démarrer l'environnement de production
 		echo "$(YELLOW)⚠️  Veuillez éditer .env.prod avec vos valeurs de production.$(NC)"; \
 		exit 1; \
 	fi
-	$(DOCKER_COMPOSE) -f docker-compose.yml -f docker-compose.prod.yml up -d
+	@if [ ! -f docker-compose.yml ] && [ -f docker-compose.prod.yml ]; then \
+		echo "$(YELLOW)📝 Copie de docker-compose.prod.yml vers docker-compose.yml...$(NC)"; \
+		cp docker-compose.prod.yml docker-compose.yml; \
+	fi
+	$(DOCKER_COMPOSE) up -d
 	@echo "$(GREEN)✅ Services de production démarrés!$(NC)"
 
 deploy: ## Déployer en production (script complet)
@@ -85,6 +89,10 @@ deploy-caddy: ## Déployer le Caddyfile en production
 	@echo "$(GREEN)🚀 Déploiement du Caddyfile en production...$(NC)"
 	@chmod +x deploy-caddy.sh 2>/dev/null || true
 	./deploy-caddy.sh
+
+setup-data-dirs: ## Créer les dossiers de données externes pour la production
+	@echo "$(GREEN)📁 Configuration des dossiers de données externes...$(NC)"
+	@./setup-data-dirs.sh
 
 setup: ## Configuration initiale (migrations + superuser)
 	@echo "$(YELLOW)🗄️ Exécution des migrations...$(NC)"
@@ -182,30 +190,31 @@ dev-restart: restart ## Alias pour restart
 dev-stop: stop ## Alias pour stop
 
 # Commandes de production
+# Note: Ces commandes utilisent docker-compose.yml (renommé depuis docker-compose.prod.yml sur le serveur)
 prod-logs: ## Logs en mode production
-	$(DOCKER_COMPOSE) -f docker-compose.prod.yml logs -f
+	$(DOCKER_COMPOSE) logs -f
 
 prod-restart: ## Redémarrage en mode production
-	$(DOCKER_COMPOSE) -f docker-compose.prod.yml restart
+	$(DOCKER_COMPOSE) restart
 
 prod-stop: ## Arrêt en mode production
-	$(DOCKER_COMPOSE) -f docker-compose.prod.yml down
+	$(DOCKER_COMPOSE) down
 
 prod-migrate: ## Exécuter les migrations en production
-	$(DOCKER_COMPOSE) -f docker-compose.prod.yml exec cin-api python manage.py migrate
+	$(DOCKER_COMPOSE) exec cin-api python manage.py migrate
 
 prod-collectstatic: ## Collecter les fichiers statiques en production
-	$(DOCKER_COMPOSE) -f docker-compose.prod.yml exec cin-api python manage.py collectstatic --noinput
+	$(DOCKER_COMPOSE) exec cin-api python manage.py collectstatic --noinput
 
 prod-shell: ## Ouvrir un shell Django en production
-	$(DOCKER_COMPOSE) -f docker-compose.prod.yml exec cin-api python manage.py shell
+	$(DOCKER_COMPOSE) exec cin-api python manage.py shell
 
 prod-status: ## Vérifier le statut des services de production
-	$(DOCKER_COMPOSE) -f docker-compose.prod.yml ps
+	$(DOCKER_COMPOSE) ps
 
 prod-superuser: ## Créer un superutilisateur en production (interactif)
 	@echo "$(YELLOW)👤 Création d'un superutilisateur en production (mode interactif)...$(NC)"
-	$(DOCKER_COMPOSE) -f docker-compose.prod.yml exec -it cin-api python manage.py createsuperuser
+	$(DOCKER_COMPOSE) exec -it cin-api python manage.py createsuperuser
 
 prod-superuser-noninteractive: ## Créer un superutilisateur en production (non-interactif)
 	@echo "$(YELLOW)👤 Création d'un superutilisateur en production (mode non-interactif)...$(NC)"
@@ -222,4 +231,4 @@ prod-superuser-noninteractive: ## Créer un superutilisateur en production (non-
 	@DJANGO_SUPERUSER_USERNAME="$$DJANGO_SUPERUSER_USERNAME" \
 	 DJANGO_SUPERUSER_EMAIL="$$DJANGO_SUPERUSER_EMAIL" \
 	 DJANGO_SUPERUSER_PASSWORD="$$DJANGO_SUPERUSER_PASSWORD" \
-	 $(DOCKER_COMPOSE) -f docker-compose.prod.yml exec -T cin-api python scripts/create_superuser.py
+	 $(DOCKER_COMPOSE) exec -T cin-api python scripts/create_superuser.py

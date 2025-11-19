@@ -6,6 +6,9 @@ venv/
 *.sqlite3
 /media/
 .env
+.env.prod
+# Production data folders (MySQL and media files)
+/data/
 # Node
 node_modules/
 build/

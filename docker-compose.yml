@@ -56,9 +56,12 @@ services:
     environment:
       PMA_HOST: mysql
       PMA_PORT: 3306
-      PMA_USER: ${MYSQL_USER}
-      PMA_PASSWORD: ${MYSQL_PASSWORD}
+      PMA_USER: ${PHPMYADMIN_USER:-${MYSQL_USER}}
+      PMA_PASSWORD: ${PHPMYADMIN_PASSWORD:-${MYSQL_PASSWORD}}
+      # MySQL root password (for advanced operations)
       MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      # Allow arbitrary server connections (optional, set to 0 to disable)
+      PMA_ARBITRARY: 0
     ports:
       - "5050:80"
     depends_on:
