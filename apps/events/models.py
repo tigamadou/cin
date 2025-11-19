@@ -99,6 +99,16 @@ class EventSettings(models.Model):
     start_date = models.DateTimeField("Date et heure de début", null=True, blank=True)
     end_date = models.DateTimeField("Date et heure de fin", null=True, blank=True)
     logo = models.ImageField("Logo de l'événement", upload_to='event_logos/', null=True, blank=True)
+    
+    # SMTP Configuration (optional - falls back to environment variables if not set)
+    smtp_host = models.CharField("Serveur SMTP", max_length=255, blank=True, help_text="Ex: smtp.gmail.com")
+    smtp_port = models.IntegerField("Port SMTP", null=True, blank=True, help_text="Ex: 587 pour TLS, 465 pour SSL")
+    smtp_user = models.CharField("Utilisateur SMTP", max_length=255, blank=True, help_text="Email ou nom d'utilisateur")
+    smtp_password = models.CharField("Mot de passe SMTP", max_length=255, blank=True, help_text="Mot de passe SMTP")
+    smtp_use_tls = models.BooleanField("Utiliser TLS", default=False, help_text="Cocher pour TLS (port 587)")
+    smtp_use_ssl = models.BooleanField("Utiliser SSL", default=False, help_text="Cocher pour SSL (port 465)")
+    smtp_from_email = models.EmailField("Email expéditeur", max_length=255, blank=True, help_text="Email utilisé comme expéditeur")
+    
     updated_at = models.DateTimeField(auto_now=True)
 
     def __str__(self):

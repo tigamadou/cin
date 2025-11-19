@@ -149,8 +149,15 @@ class EventSettingsSerializer(serializers.ModelSerializer):
     
     class Meta:
         model = EventSettings
-        fields = ['event_name', 'event_description', 'venue', 'start_date', 'end_date', 'logo', 'logo_url', 'updated_at']
+        fields = [
+            'event_name', 'event_description', 'venue', 'start_date', 'end_date', 'logo', 'logo_url',
+            'smtp_host', 'smtp_port', 'smtp_user', 'smtp_password', 'smtp_use_tls', 'smtp_use_ssl', 'smtp_from_email',
+            'updated_at'
+        ]
         read_only_fields = ['updated_at']
+        extra_kwargs = {
+            'smtp_password': {'write_only': True}  # Don't return password in GET requests
+        }
     
     def get_logo_url(self, obj):
         """Return the absolute URL for the logo image."""
@@ -160,5 +167,14 @@ class EventSettingsSerializer(serializers.ModelSerializer):
             if request:
                 return request.build_absolute_uri(obj.logo.url)
             # Fallback to APP_DOMAIN setting
-            return f"{settings.API_DOMAIN}{obj.logo.url}"
+            return f"{settings.APP_DOMAIN}{obj.logo.url}"
         return None
+    
+    def to_representation(self, instance):
+        """Override to exclude password from GET requests."""
+        data = super().to_representation(instance)
+        # Don't send password in response, but keep it in the model
+        if 'smtp_password' in data:
+            # Only show if password is set (for UI indication)
+            data['smtp_password'] = '***' if instance.smtp_password else ''
+        return data

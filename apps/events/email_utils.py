@@ -1,8 +1,9 @@
 # apps/events/email_utils.py
-from django.core.mail import EmailMultiAlternatives
+from django.core.mail import EmailMultiAlternatives, get_connection
 from django.template.loader import render_to_string
 from django.conf import settings
 from .models import EventSettings
+from .email_config import get_email_config
 import logging
 
 logger = logging.getLogger(__name__)
@@ -73,12 +74,27 @@ def send_participant_invitation_email(participant, qr_bytes=None):
         event_type = participant.event_type or "l'événement"
         subject = f'🎉 Invitation à {event_type} - Votre billet QR code'
         
+        # Get email configuration (database settings take precedence)
+        email_config = get_email_config()
+        
+        # Create email connection with current configuration
+        connection = get_connection(
+            host=email_config['EMAIL_HOST'],
+            port=email_config['EMAIL_PORT'],
+            username=email_config['EMAIL_HOST_USER'],
+            password=email_config['EMAIL_HOST_PASSWORD'],
+            use_tls=email_config['EMAIL_USE_TLS'],
+            use_ssl=email_config['EMAIL_USE_SSL'],
+            fail_silently=False
+        )
+        
         # Create email message
         email = EmailMultiAlternatives(
             subject=subject,
             body=text_content,
-            from_email=settings.DEFAULT_FROM_EMAIL,
-            to=[participant.email]
+            from_email=email_config['DEFAULT_FROM_EMAIL'],
+            to=[participant.email],
+            connection=connection
         )
         
         # Attach HTML version
@@ -162,12 +178,27 @@ def send_participant_update_email(participant, qr_bytes=None):
         event_type = participant.event_type or "l'événement"
         subject = f'📝 Mise à jour de votre invitation à {event_type}'
         
+        # Get email configuration (database settings take precedence)
+        email_config = get_email_config()
+        
+        # Create email connection with current configuration
+        connection = get_connection(
+            host=email_config['EMAIL_HOST'],
+            port=email_config['EMAIL_PORT'],
+            username=email_config['EMAIL_HOST_USER'],
+            password=email_config['EMAIL_HOST_PASSWORD'],
+            use_tls=email_config['EMAIL_USE_TLS'],
+            use_ssl=email_config['EMAIL_USE_SSL'],
+            fail_silently=False
+        )
+        
         # Create email message
         email = EmailMultiAlternatives(
             subject=subject,
             body=text_content,
-            from_email=settings.DEFAULT_FROM_EMAIL,
-            to=[participant.email]
+            from_email=email_config['DEFAULT_FROM_EMAIL'],
+            to=[participant.email],
+            connection=connection
         )
         
         # Attach HTML version

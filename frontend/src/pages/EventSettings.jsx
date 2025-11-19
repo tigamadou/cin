@@ -10,7 +10,14 @@ const EventSettings = () => {
     start_date: '',
     end_date: '',
     logo: null,
-    logo_url: ''
+    logo_url: '',
+    smtp_host: '',
+    smtp_port: '',
+    smtp_user: '',
+    smtp_password: '',
+    smtp_use_tls: false,
+    smtp_use_ssl: false,
+    smtp_from_email: ''
   })
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
@@ -41,7 +48,14 @@ const EventSettings = () => {
         start_date: formatDateForInput(data.start_date),
         end_date: formatDateForInput(data.end_date),
         logo: null,
-        logo_url: data.logo_url || ''
+        logo_url: data.logo_url || '',
+        smtp_host: data.smtp_host || '',
+        smtp_port: data.smtp_port || '',
+        smtp_user: data.smtp_user || '',
+        smtp_password: data.smtp_password === '***' ? '' : (data.smtp_password || ''), // Handle masked password
+        smtp_use_tls: data.smtp_use_tls || false,
+        smtp_use_ssl: data.smtp_use_ssl || false,
+        smtp_from_email: data.smtp_from_email || ''
       })
     } catch (err) {
       console.error('Failed to load event settings:', err)
@@ -88,6 +102,15 @@ const EventSettings = () => {
       if (settings.start_date) formData.append('start_date', settings.start_date)
       if (settings.end_date) formData.append('end_date', settings.end_date)
       if (settings.logo) formData.append('logo', settings.logo)
+      
+      // SMTP settings
+      formData.append('smtp_host', settings.smtp_host)
+      if (settings.smtp_port) formData.append('smtp_port', settings.smtp_port)
+      formData.append('smtp_user', settings.smtp_user)
+      if (settings.smtp_password) formData.append('smtp_password', settings.smtp_password)
+      formData.append('smtp_use_tls', settings.smtp_use_tls)
+      formData.append('smtp_use_ssl', settings.smtp_use_ssl)
+      formData.append('smtp_from_email', settings.smtp_from_email)
 
       // Use api.updateEventSettings for proper API URL handling and CSRF
       const response = await api.updateEventSettings(formData)
@@ -254,6 +277,118 @@ const EventSettings = () => {
                 <p className="mt-1 text-sm text-gray-500">
                   Quand se termine l'événement
                 </p>
+              </div>
+            </div>
+
+            {/* SMTP Configuration Section */}
+            <div className="border-t pt-6 mt-6">
+              <h2 className="text-xl font-semibold text-gray-900 mb-4">Configuration SMTP</h2>
+              <p className="text-sm text-gray-500 mb-4">
+                Configurez les paramètres SMTP pour l'envoi d'emails. Si non configuré, les paramètres d'environnement seront utilisés.
+              </p>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label htmlFor="smtp_host" className="block text-sm font-medium text-gray-700 mb-2">
+                    Serveur SMTP
+                  </label>
+                  <input
+                    type="text"
+                    id="smtp_host"
+                    value={settings.smtp_host}
+                    onChange={(e) => handleChange('smtp_host', e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    placeholder="Ex: smtp.gmail.com"
+                  />
+                </div>
+
+                <div>
+                  <label htmlFor="smtp_port" className="block text-sm font-medium text-gray-700 mb-2">
+                    Port SMTP
+                  </label>
+                  <input
+                    type="number"
+                    id="smtp_port"
+                    value={settings.smtp_port}
+                    onChange={(e) => handleChange('smtp_port', e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    placeholder="Ex: 587 (TLS) ou 465 (SSL)"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+                <div>
+                  <label htmlFor="smtp_user" className="block text-sm font-medium text-gray-700 mb-2">
+                    Utilisateur SMTP
+                  </label>
+                  <input
+                    type="text"
+                    id="smtp_user"
+                    value={settings.smtp_user}
+                    onChange={(e) => handleChange('smtp_user', e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    placeholder="Email ou nom d'utilisateur"
+                  />
+                </div>
+
+                <div>
+                  <label htmlFor="smtp_password" className="block text-sm font-medium text-gray-700 mb-2">
+                    Mot de passe SMTP
+                  </label>
+                  <input
+                    type="password"
+                    id="smtp_password"
+                    value={settings.smtp_password}
+                    onChange={(e) => handleChange('smtp_password', e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    placeholder="Mot de passe SMTP"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+                <div>
+                  <label htmlFor="smtp_from_email" className="block text-sm font-medium text-gray-700 mb-2">
+                    Email expéditeur
+                  </label>
+                  <input
+                    type="email"
+                    id="smtp_from_email"
+                    value={settings.smtp_from_email}
+                    onChange={(e) => handleChange('smtp_from_email', e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    placeholder="noreply@example.com"
+                  />
+                </div>
+
+                <div className="flex items-end space-x-4">
+                  <div className="flex items-center">
+                    <input
+                      type="checkbox"
+                      id="smtp_use_tls"
+                      checked={settings.smtp_use_tls}
+                      onChange={(e) => handleChange('smtp_use_tls', e.target.checked)}
+                      className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                    />
+                    <label htmlFor="smtp_use_tls" className="ml-2 block text-sm text-gray-700">
+                      Utiliser TLS (port 587)
+                    </label>
+                  </div>
+
+                  <div className="flex items-center">
+                    <input
+                      type="checkbox"
+                      id="smtp_use_ssl"
+                      checked={settings.smtp_use_ssl}
+                      onChange={(e) => handleChange('smtp_use_ssl', e.target.checked)}
+                      className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                    />
+                    <label htmlFor="smtp_use_ssl" className="ml-2 block text-sm text-gray-700">
+                      Utiliser SSL (port 465)
+                    </label>
+                  </div>
+                </div>
               </div>
             </div>
 
