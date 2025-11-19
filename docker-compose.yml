@@ -15,6 +15,8 @@ services:
     env_file: .env
     environment:
       - DATABASE_URL=postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+      - CSRF_TRUSTED_ORIGINS=${CSRF_TRUSTED_ORIGINS:-http://localhost:5173,http://127.0.0.1:5173,http://localhost:8000,http://127.0.0.1:8000}
+      - CORS_ALLOWED_ORIGINS=${CORS_ALLOWED_ORIGINS:-http://localhost:5173,http://127.0.0.1:5173,http://localhost:8000,http://127.0.0.1:8000}
     ports:
       - "8000:8000"
     volumes:
@@ -22,6 +24,7 @@ services:
       - ./media:/app/media
     depends_on:
       - postgres
+      - mailhog
     restart: unless-stopped
   frontend:
     image: node:20-bullseye
@@ -43,5 +46,27 @@ services:
       - "8025:8025"  # Web UI
     restart: unless-stopped
 
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: pgadmin
+    environment:
+      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_EMAIL:-admin@localhost}
+      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_PASSWORD:-admin123}
+      PGADMIN_CONFIG_SERVER_MODE: 'False'
+      PGADMIN_CONFIG_MASTER_PASSWORD_REQUIRED: 'False'
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      POSTGRES_DB: ${POSTGRES_DB:-postgres}
+    ports:
+      - "5050:80"
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
+      - ./pgadmin/entrypoint.sh:/custom-entrypoint.sh:ro
+    entrypoint: ["/bin/bash", "/custom-entrypoint.sh"]
+    depends_on:
+      - postgres
+    restart: unless-stopped
+
 volumes:
   postgres_data:
+  pgadmin_data:

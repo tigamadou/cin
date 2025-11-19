@@ -1,0 +1,38 @@
+{% if is_update %}
+📝 MISE À JOUR DE VOTRE INVITATION
+{% else %}
+🎉 INVITATION À L'ÉVÉNEMENT
+{% endif %}
+
+Bonjour {{ participant.first_name }},
+
+{% if is_update %}
+Vos informations de participation ont été mises à jour !
+{% else %}
+Vous êtes invité(e) à participer à notre événement !
+{% endif %}
+
+ÉVÉNEMENT : {{ event_name|default:"Notre Événement" }}
+{% if venue %}
+LIEU : {{ venue }}
+{% endif %}
+{% if start_date %}
+DÉBUT : {{ start_date|date:"d/m/Y à H:i" }}
+{% endif %}
+{% if end_date %}
+FIN : {{ end_date|date:"d/m/Y à H:i" }}
+{% endif %}
+DATE D'INVITATION : {{ participant.created_at|date:"d/m/Y à H:i" }}
+
+INSTRUCTIONS :
+- Présentez votre QR code à l'accueil
+- Arrivez à l'heure prévue
+- Conservez ce billet en sécurité
+
+{% if qr_base64 %}
+Votre QR code est inclus dans la version HTML de cet email.
+{% endif %}
+
+---
+L'équipe organisatrice
+

@@ -46,8 +46,9 @@ def send_participant_invitation_email(participant, qr_bytes=None):
         try:
             html_content = render_to_string('emails/participant_invitation.html', context)
             text_content = render_to_string('emails/participant_invitation.txt', context)
+            logger.debug(f"Email templates loaded successfully for {participant.email}")
         except Exception as template_error:
-            logger.error(f"Template rendering error: {template_error}")
+            logger.error(f"Template rendering error for {participant.email}: {template_error}", exc_info=True)
             # Fallback to simple text email
             html_content = f"""
             <html>
@@ -134,8 +135,9 @@ def send_participant_update_email(participant, qr_bytes=None):
         try:
             html_content = render_to_string('emails/participant_invitation.html', context)
             text_content = render_to_string('emails/participant_invitation.txt', context)
+            logger.debug(f"Email templates loaded successfully for {participant.email}")
         except Exception as template_error:
-            logger.error(f"Template rendering error: {template_error}")
+            logger.error(f"Template rendering error for {participant.email}: {template_error}", exc_info=True)
             # Fallback to simple text email
             html_content = f"""
             <html>

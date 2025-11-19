@@ -84,7 +84,7 @@ STATIC_ROOT = BASE_DIR / 'staticfiles'
 STATICFILES_DIRS = [
     BASE_DIR / 'frontend' / 'static',
 ]
-TEMPLATES[0]["DIRS"] = [BASE_DIR / "frontend"]
+TEMPLATES[0]["DIRS"] = [BASE_DIR / "templates", BASE_DIR / "frontend"]
 STATICFILES_STORAGE = 'whitenoise.storage.CompressedStaticFilesStorage'
 
 MEDIA_URL = '/media/'
@@ -98,10 +98,11 @@ REST_FRAMEWORK = {
 }
 # Email config
 EMAIL_HOST = os.getenv('EMAIL_HOST')
-EMAIL_PORT = int(os.getenv('EMAIL_PORT', '25'))
+EMAIL_PORT = int(os.getenv('EMAIL_PORT', '1025'))  # Default to 1025 for MailHog in dev
 EMAIL_HOST_USER = os.getenv('EMAIL_HOST_USER')
 EMAIL_HOST_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD')
 EMAIL_USE_TLS = os.getenv('EMAIL_USE_TLS', 'False') == 'True'
+EMAIL_USE_SSL = os.getenv('EMAIL_USE_SSL', 'False') == 'True'
 DEFAULT_FROM_EMAIL = os.getenv('DEFAULT_FROM_EMAIL', 'no-reply@example.com')
 
 # App domain for generating absolute URLs
@@ -117,8 +118,8 @@ CORS_ALLOW_CREDENTIALS = True
 # ]
 # si tu utilises proxy (vite -> django) et front dans Docker, ajuste en conséquence
 
-CSRF_TRUSTED_ORIGINS = os.getenv('CSRF_TRUSTED_ORIGINS', '').split(',')
-CORS_ALLOWED_ORIGINS = os.getenv('CORS_ALLOWED_ORIGINS', '').split(',')
+CSRF_TRUSTED_ORIGINS = [origin.strip() for origin in os.getenv('CSRF_TRUSTED_ORIGINS', '').split(',') if origin.strip()]
+CORS_ALLOWED_ORIGINS = [origin.strip() for origin in os.getenv('CORS_ALLOWED_ORIGINS', '').split(',') if origin.strip()]
 
 # cookies (optionnel)
 SESSION_COOKIE_SAMESITE = "Lax"
