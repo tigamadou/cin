@@ -4,20 +4,22 @@
 version: "3.8"
 
 services:
-  postgres:
-    image: postgres:14
+  mysql:
+    image: mysql:8.0
     environment:
-      POSTGRES_DB: ${POSTGRES_DB}
-      POSTGRES_USER: ${POSTGRES_USER}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      MYSQL_DATABASE: ${MYSQL_DATABASE}
+      MYSQL_USER: ${MYSQL_USER}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - mysql_data:/var/lib/mysql
     restart: unless-stopped
     networks:
       - cin-network
+    command: --default-authentication-plugin=mysql_native_password
     # Production: pas d'exposition de port direct
     # ports:
-    #   - "5432:5432"
+    #   - "3306:3306"
 
   web:
     build:
@@ -25,7 +27,7 @@ services:
       dockerfile: Dockerfile
     command: gunicorn project.wsgi:application --bind 0.0.0.0:8000 --workers 3 --timeout 120
     environment:
-      - DATABASE_URL=postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+      - DATABASE_URL=mysql://${MYSQL_USER}:${MYSQL_PASSWORD}@mysql:3306/${MYSQL_DATABASE}
       - SECRET_KEY=${SECRET_KEY}
       - DEBUG=False
       - ALLOWED_HOSTS=cin2025.bj,www.cin2025.bj,panel.cin2025.bj,www.panel.cin2025.bj
@@ -45,7 +47,7 @@ services:
     ports:
       - "8000:8000"
     depends_on:
-      - postgres
+      - mysql
     restart: unless-stopped
     networks:
       - cin-network
@@ -81,35 +83,27 @@ services:
   #   volumes:
   #     - redis_data:/data
 
-  pgadmin:
-    image: dpage/pgadmin4:latest
-    container_name: pgadmin
+  phpmyadmin:
+    image: phpmyadmin/phpmyadmin:latest
+    container_name: phpmyadmin
     environment:
-      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_EMAIL:-admin@localhost}
-      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_PASSWORD:-admin123}
-      PGADMIN_CONFIG_SERVER_MODE: 'False'
-      PGADMIN_CONFIG_MASTER_PASSWORD_REQUIRED: 'False'
-      POSTGRES_USER: ${POSTGRES_USER:-postgres}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
-      POSTGRES_DB: ${POSTGRES_DB:-postgres}
+      PMA_HOST: mysql
+      PMA_PORT: 3306
+      PMA_USER: ${MYSQL_USER}
+      PMA_PASSWORD: ${MYSQL_PASSWORD}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
     ports:
       - "5050:80"
-    volumes:
-      - pgadmin_data:/var/lib/pgadmin
-      - ./pgadmin/entrypoint.sh:/custom-entrypoint.sh:ro
-    entrypoint: ["/bin/bash", "/custom-entrypoint.sh"]
     depends_on:
-      - postgres
+      - mysql
     restart: unless-stopped
     networks:
       - cin-network
 
 volumes:
-  postgres_data:
+  mysql_data:
     driver: local
   redis_data:
-    driver: local
-  pgadmin_data:
     driver: local
 
 networks:
