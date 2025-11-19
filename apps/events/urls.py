@@ -8,7 +8,8 @@ from .views import (
     CurrentUserAPIView,
     CsrfTokenView, LoginAPIView, LogoutAPIView,
     ActivateUserAPIView,
-    EventSettingsAPIView
+    EventSettingsAPIView,
+    TestSMTPAPIView
 )
 
 urlpatterns = [
@@ -34,4 +35,5 @@ urlpatterns = [
     
     # event settings
     path('event-settings/', EventSettingsAPIView.as_view(), name='event-settings'),
+    path('event-settings/test-smtp/', TestSMTPAPIView.as_view(), name='test-smtp'),
 ]

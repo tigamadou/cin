@@ -62,5 +62,10 @@ export const api = {
     }
     
     return apiFetch(getApiUrl("event-settings/"), options)
-  }
+  },
+  testSMTP: (email) =>
+    apiFetch(getApiUrl("event-settings/test-smtp/"), {
+      method: "POST",
+      body: JSON.stringify({ email })
+    })
 }

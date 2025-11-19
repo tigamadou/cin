@@ -19,10 +19,14 @@ const EventSettings = () => {
     smtp_use_ssl: false,
     smtp_from_email: ''
   })
+  const [activeTab, setActiveTab] = useState('event') // 'event' or 'smtp'
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
+  const [testingSMTP, setTestingSMTP] = useState(false)
+  const [testEmail, setTestEmail] = useState('') // Email address for SMTP test
   const [error, setError] = useState(null)
   const [success, setSuccess] = useState(false)
+  const [smtpTestResult, setSmtpTestResult] = useState(null)
 
   useEffect(() => {
     loadSettings()
@@ -130,6 +134,36 @@ const EventSettings = () => {
     }
   }
 
+  const handleTestSMTP = async () => {
+    // Validate email address
+    if (!testEmail || !testEmail.includes('@')) {
+      setSmtpTestResult({
+        success: false,
+        message: 'Veuillez entrer une adresse email valide pour le test'
+      })
+      return
+    }
+
+    setTestingSMTP(true)
+    setSmtpTestResult(null)
+    setError(null)
+
+    try {
+      const response = await api.testSMTP(testEmail)
+      setSmtpTestResult({
+        success: true,
+        message: response.data.detail || 'Email de test envoyé avec succès!'
+      })
+    } catch (err) {
+      setSmtpTestResult({
+        success: false,
+        message: err.data?.detail || err.message || 'Erreur lors du test SMTP'
+      })
+    } finally {
+      setTestingSMTP(false)
+    }
+  }
+
   if (loading) {
     return (
       <div className="flex justify-center items-center min-h-screen">
@@ -164,233 +198,320 @@ const EventSettings = () => {
             </div>
           )}
 
-          <form onSubmit={handleSubmit} className="space-y-6">
-            <div>
-              <label htmlFor="event_name" className="block text-sm font-medium text-gray-700 mb-2">
-                Nom de l'événement *
-              </label>
-              <input
-                type="text"
-                id="event_name"
-                value={settings.event_name}
-                onChange={(e) => handleChange('event_name', e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                placeholder="Entrez le nom de l'événement"
-                required
-              />
-              <p className="mt-1 text-sm text-gray-500">
-                Ce nom apparaîtra dans les emails d'invitation et l'interface
-              </p>
-            </div>
+          {/* Tabs */}
+          <div className="border-b border-gray-200 mb-6">
+            <nav className="-mb-px flex space-x-8">
+              <button
+                type="button"
+                onClick={() => setActiveTab('event')}
+                className={`py-4 px-1 border-b-2 font-medium text-sm ${
+                  activeTab === 'event'
+                    ? 'border-blue-500 text-blue-600'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                }`}
+              >
+                Informations de l'événement
+              </button>
+              <button
+                type="button"
+                onClick={() => setActiveTab('smtp')}
+                className={`py-4 px-1 border-b-2 font-medium text-sm ${
+                  activeTab === 'smtp'
+                    ? 'border-blue-500 text-blue-600'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                }`}
+              >
+                Configuration SMTP
+              </button>
+            </nav>
+          </div>
 
-            <div>
-              <label htmlFor="logo" className="block text-sm font-medium text-gray-700 mb-2">
-                Logo de l'événement
-              </label>
-              <div className="flex items-center space-x-4">
-                <div className="flex-1">
+          <form onSubmit={handleSubmit} className="space-y-6">
+            {/* Event Information Tab */}
+            {activeTab === 'event' && (
+              <div className="space-y-6">
+                <div>
+                  <label htmlFor="event_name" className="block text-sm font-medium text-gray-700 mb-2">
+                    Nom de l'événement *
+                  </label>
                   <input
-                    type="file"
-                    id="logo"
-                    accept="image/*"
-                    onChange={handleLogoChange}
+                    type="text"
+                    id="event_name"
+                    value={settings.event_name}
+                    onChange={(e) => handleChange('event_name', e.target.value)}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    placeholder="Entrez le nom de l'événement"
+                    required
                   />
                   <p className="mt-1 text-sm text-gray-500">
-                    Formats acceptés: JPG, PNG, GIF (max 5MB)
+                    Ce nom apparaîtra dans les emails d'invitation et l'interface
                   </p>
                 </div>
-                {settings.logo_url && (
-                  <div className="flex-shrink-0">
-                    <img
-                      src={settings.logo_url}
-                      alt="Logo preview"
-                      className="h-16 w-16 object-contain border border-gray-300 rounded"
-                    />
-                  </div>
-                )}
-              </div>
-            </div>
 
-            <div>
-              <label htmlFor="event_description" className="block text-sm font-medium text-gray-700 mb-2">
-                Description de l'événement
-              </label>
-              <textarea
-                id="event_description"
-                value={settings.event_description}
-                onChange={(e) => handleChange('event_description', e.target.value)}
-                rows={4}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                placeholder="Description optionnelle de l'événement"
-              />
-              <p className="mt-1 text-sm text-gray-500">
-                Description optionnelle qui peut être utilisée dans les communications
-              </p>
-            </div>
-
-            <div>
-              <label htmlFor="venue" className="block text-sm font-medium text-gray-700 mb-2">
-                Lieu de l'événement
-              </label>
-              <input
-                type="text"
-                id="venue"
-                value={settings.venue}
-                onChange={(e) => handleChange('venue', e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                placeholder="Ex: Centre de conférences, Salle 101, 123 Rue Example"
-              />
-              <p className="mt-1 text-sm text-gray-500">
-                Adresse ou lieu où se déroule l'événement
-              </p>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label htmlFor="start_date" className="block text-sm font-medium text-gray-700 mb-2">
-                  Date et heure de début
-                </label>
-                <input
-                  type="datetime-local"
-                  id="start_date"
-                  value={settings.start_date}
-                  onChange={(e) => handleChange('start_date', e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                />
-                <p className="mt-1 text-sm text-gray-500">
-                  Quand commence l'événement
-                </p>
-              </div>
-
-              <div>
-                <label htmlFor="end_date" className="block text-sm font-medium text-gray-700 mb-2">
-                  Date et heure de fin
-                </label>
-                <input
-                  type="datetime-local"
-                  id="end_date"
-                  value={settings.end_date}
-                  onChange={(e) => handleChange('end_date', e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                />
-                <p className="mt-1 text-sm text-gray-500">
-                  Quand se termine l'événement
-                </p>
-              </div>
-            </div>
-
-            {/* SMTP Configuration Section */}
-            <div className="border-t pt-6 mt-6">
-              <h2 className="text-xl font-semibold text-gray-900 mb-4">Configuration SMTP</h2>
-              <p className="text-sm text-gray-500 mb-4">
-                Configurez les paramètres SMTP pour l'envoi d'emails. Si non configuré, les paramètres d'environnement seront utilisés.
-              </p>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label htmlFor="smtp_host" className="block text-sm font-medium text-gray-700 mb-2">
-                    Serveur SMTP
+                  <label htmlFor="logo" className="block text-sm font-medium text-gray-700 mb-2">
+                    Logo de l'événement
+                  </label>
+                  <div className="flex items-center space-x-4">
+                    <div className="flex-1">
+                      <input
+                        type="file"
+                        id="logo"
+                        accept="image/*"
+                        onChange={handleLogoChange}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      />
+                      <p className="mt-1 text-sm text-gray-500">
+                        Formats acceptés: JPG, PNG, GIF (max 5MB)
+                      </p>
+                    </div>
+                    {settings.logo_url && (
+                      <div className="flex-shrink-0">
+                        <img
+                          src={settings.logo_url}
+                          alt="Logo preview"
+                          className="h-16 w-16 object-contain border border-gray-300 rounded"
+                        />
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                <div>
+                  <label htmlFor="event_description" className="block text-sm font-medium text-gray-700 mb-2">
+                    Description de l'événement
+                  </label>
+                  <textarea
+                    id="event_description"
+                    value={settings.event_description}
+                    onChange={(e) => handleChange('event_description', e.target.value)}
+                    rows={4}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    placeholder="Description optionnelle de l'événement"
+                  />
+                  <p className="mt-1 text-sm text-gray-500">
+                    Description optionnelle qui peut être utilisée dans les communications
+                  </p>
+                </div>
+
+                <div>
+                  <label htmlFor="venue" className="block text-sm font-medium text-gray-700 mb-2">
+                    Lieu de l'événement
                   </label>
                   <input
                     type="text"
-                    id="smtp_host"
-                    value={settings.smtp_host}
-                    onChange={(e) => handleChange('smtp_host', e.target.value)}
+                    id="venue"
+                    value={settings.venue}
+                    onChange={(e) => handleChange('venue', e.target.value)}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    placeholder="Ex: smtp.gmail.com"
+                    placeholder="Ex: Centre de conférences, Salle 101, 123 Rue Example"
                   />
+                  <p className="mt-1 text-sm text-gray-500">
+                    Adresse ou lieu où se déroule l'événement
+                  </p>
                 </div>
 
-                <div>
-                  <label htmlFor="smtp_port" className="block text-sm font-medium text-gray-700 mb-2">
-                    Port SMTP
-                  </label>
-                  <input
-                    type="number"
-                    id="smtp_port"
-                    value={settings.smtp_port}
-                    onChange={(e) => handleChange('smtp_port', e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    placeholder="Ex: 587 (TLS) ou 465 (SSL)"
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
-                <div>
-                  <label htmlFor="smtp_user" className="block text-sm font-medium text-gray-700 mb-2">
-                    Utilisateur SMTP
-                  </label>
-                  <input
-                    type="text"
-                    id="smtp_user"
-                    value={settings.smtp_user}
-                    onChange={(e) => handleChange('smtp_user', e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    placeholder="Email ou nom d'utilisateur"
-                  />
-                </div>
-
-                <div>
-                  <label htmlFor="smtp_password" className="block text-sm font-medium text-gray-700 mb-2">
-                    Mot de passe SMTP
-                  </label>
-                  <input
-                    type="password"
-                    id="smtp_password"
-                    value={settings.smtp_password}
-                    onChange={(e) => handleChange('smtp_password', e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    placeholder="Mot de passe SMTP"
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
-                <div>
-                  <label htmlFor="smtp_from_email" className="block text-sm font-medium text-gray-700 mb-2">
-                    Email expéditeur
-                  </label>
-                  <input
-                    type="email"
-                    id="smtp_from_email"
-                    value={settings.smtp_from_email}
-                    onChange={(e) => handleChange('smtp_from_email', e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    placeholder="noreply@example.com"
-                  />
-                </div>
-
-                <div className="flex items-end space-x-4">
-                  <div className="flex items-center">
-                    <input
-                      type="checkbox"
-                      id="smtp_use_tls"
-                      checked={settings.smtp_use_tls}
-                      onChange={(e) => handleChange('smtp_use_tls', e.target.checked)}
-                      className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                    />
-                    <label htmlFor="smtp_use_tls" className="ml-2 block text-sm text-gray-700">
-                      Utiliser TLS (port 587)
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label htmlFor="start_date" className="block text-sm font-medium text-gray-700 mb-2">
+                      Date et heure de début
                     </label>
+                    <input
+                      type="datetime-local"
+                      id="start_date"
+                      value={settings.start_date}
+                      onChange={(e) => handleChange('start_date', e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    />
+                    <p className="mt-1 text-sm text-gray-500">
+                      Quand commence l'événement
+                    </p>
                   </div>
 
-                  <div className="flex items-center">
-                    <input
-                      type="checkbox"
-                      id="smtp_use_ssl"
-                      checked={settings.smtp_use_ssl}
-                      onChange={(e) => handleChange('smtp_use_ssl', e.target.checked)}
-                      className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                    />
-                    <label htmlFor="smtp_use_ssl" className="ml-2 block text-sm text-gray-700">
-                      Utiliser SSL (port 465)
+                  <div>
+                    <label htmlFor="end_date" className="block text-sm font-medium text-gray-700 mb-2">
+                      Date et heure de fin
                     </label>
+                    <input
+                      type="datetime-local"
+                      id="end_date"
+                      value={settings.end_date}
+                      onChange={(e) => handleChange('end_date', e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    />
+                    <p className="mt-1 text-sm text-gray-500">
+                      Quand se termine l'événement
+                    </p>
                   </div>
                 </div>
               </div>
-            </div>
+            )}
+
+            {/* SMTP Configuration Tab */}
+            {activeTab === 'smtp' && (
+              <div className="space-y-6">
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900 mb-2">Configuration SMTP</h3>
+                  <p className="text-sm text-gray-500 mb-4">
+                    Configurez les paramètres SMTP pour l'envoi d'emails. Si non configuré, les paramètres d'environnement seront utilisés.
+                  </p>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label htmlFor="smtp_host" className="block text-sm font-medium text-gray-700 mb-2">
+                      Serveur SMTP
+                    </label>
+                    <input
+                      type="text"
+                      id="smtp_host"
+                      value={settings.smtp_host}
+                      onChange={(e) => handleChange('smtp_host', e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      placeholder="Ex: smtp.gmail.com"
+                    />
+                  </div>
+
+                  <div>
+                    <label htmlFor="smtp_port" className="block text-sm font-medium text-gray-700 mb-2">
+                      Port SMTP
+                    </label>
+                    <input
+                      type="number"
+                      id="smtp_port"
+                      value={settings.smtp_port}
+                      onChange={(e) => handleChange('smtp_port', e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      placeholder="Ex: 587 (TLS) ou 465 (SSL)"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label htmlFor="smtp_user" className="block text-sm font-medium text-gray-700 mb-2">
+                      Utilisateur SMTP
+                    </label>
+                    <input
+                      type="text"
+                      id="smtp_user"
+                      value={settings.smtp_user}
+                      onChange={(e) => handleChange('smtp_user', e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      placeholder="Email ou nom d'utilisateur"
+                    />
+                  </div>
+
+                  <div>
+                    <label htmlFor="smtp_password" className="block text-sm font-medium text-gray-700 mb-2">
+                      Mot de passe SMTP
+                    </label>
+                    <input
+                      type="password"
+                      id="smtp_password"
+                      value={settings.smtp_password}
+                      onChange={(e) => handleChange('smtp_password', e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      placeholder="Mot de passe SMTP"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label htmlFor="smtp_from_email" className="block text-sm font-medium text-gray-700 mb-2">
+                      Email expéditeur
+                    </label>
+                    <input
+                      type="email"
+                      id="smtp_from_email"
+                      value={settings.smtp_from_email}
+                      onChange={(e) => handleChange('smtp_from_email', e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      placeholder="noreply@example.com"
+                    />
+                  </div>
+
+                  <div className="flex items-end space-x-4">
+                    <div className="flex items-center">
+                      <input
+                        type="checkbox"
+                        id="smtp_use_tls"
+                        checked={settings.smtp_use_tls}
+                        onChange={(e) => handleChange('smtp_use_tls', e.target.checked)}
+                        className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                      />
+                      <label htmlFor="smtp_use_tls" className="ml-2 block text-sm text-gray-700">
+                        Utiliser TLS (port 587)
+                      </label>
+                    </div>
+
+                    <div className="flex items-center">
+                      <input
+                        type="checkbox"
+                        id="smtp_use_ssl"
+                        checked={settings.smtp_use_ssl}
+                        onChange={(e) => handleChange('smtp_use_ssl', e.target.checked)}
+                        className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                      />
+                      <label htmlFor="smtp_use_ssl" className="ml-2 block text-sm text-gray-700">
+                        Utiliser SSL (port 465)
+                      </label>
+                    </div>
+                  </div>
+                </div>
+
+                {/* SMTP Test Section */}
+                <div className="border-t pt-6 mt-6">
+                  <h3 className="text-lg font-semibold text-gray-900 mb-2">Tester la configuration SMTP</h3>
+                  <p className="text-sm text-gray-500 mb-4">
+                    Envoyez un email de test pour vérifier que votre configuration SMTP fonctionne correctement.
+                  </p>
+                  
+                  <div className="mb-4">
+                    <label htmlFor="test_email" className="block text-sm font-medium text-gray-700 mb-2">
+                      Adresse email de test *
+                    </label>
+                    <input
+                      type="email"
+                      id="test_email"
+                      value={testEmail}
+                      onChange={(e) => setTestEmail(e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      placeholder="email@example.com"
+                      disabled={testingSMTP}
+                    />
+                    <p className="mt-1 text-sm text-gray-500">
+                      L'email de test sera envoyé à cette adresse
+                    </p>
+                  </div>
+                  
+                  {smtpTestResult && (
+                    <div className={`mb-4 p-4 rounded ${
+                      smtpTestResult.success
+                        ? 'bg-green-100 border border-green-400 text-green-700'
+                        : 'bg-red-100 border border-red-400 text-red-700'
+                    }`}>
+                      {smtpTestResult.message}
+                    </div>
+                  )}
+
+                  <button
+                    type="button"
+                    onClick={handleTestSMTP}
+                    disabled={testingSMTP || !settings.smtp_host || !testEmail}
+                    className="px-6 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  >
+                    {testingSMTP ? 'Test en cours...' : 'Envoyer un email de test'}
+                  </button>
+                  {!settings.smtp_host && (
+                    <p className="mt-2 text-sm text-gray-500">
+                      Veuillez d'abord configurer le serveur SMTP
+                    </p>
+                  )}
+                </div>
+              </div>
+            )}
 
             <div className="flex justify-end space-x-4">
               <Link

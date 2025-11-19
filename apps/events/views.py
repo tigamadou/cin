@@ -444,7 +444,7 @@ class EventSettingsAPIView(APIView):
         """Get current event settings."""
         try:
             settings = EventSettings.get_solo()
-            serializer = EventSettingsSerializer(settings)
+            serializer = EventSettingsSerializer(settings, context={'request': request})
             return Response(serializer.data)
         except Exception as e:
             return Response(
@@ -456,7 +456,7 @@ class EventSettingsAPIView(APIView):
         """Update event settings."""
         try:
             settings = EventSettings.get_solo()
-            serializer = EventSettingsSerializer(settings, data=request.data, partial=True)
+            serializer = EventSettingsSerializer(settings, data=request.data, partial=True, context={'request': request})
             if serializer.is_valid():
                 serializer.save()
                 return Response(serializer.data)
@@ -465,4 +465,103 @@ class EventSettingsAPIView(APIView):
             return Response(
                 {"detail": "Error updating event settings"}, 
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
+
+class TestSMTPAPIView(APIView):
+    """API view to test SMTP configuration."""
+    permission_classes = [IsAdminUser]
+    
+    def post(self, request):
+        """Test SMTP settings by sending a test email."""
+        from django.core.mail import get_connection
+        from .email_config import get_email_config
+        import logging
+        
+        logger = logging.getLogger(__name__)
+        
+        try:
+            # Get email configuration (database settings take precedence)
+            email_config = get_email_config()
+            
+            # Validate required fields
+            if not email_config['EMAIL_HOST']:
+                return Response(
+                    {"detail": "SMTP host is not configured. Please configure SMTP settings first."},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            
+            # Get test email address from request or use current user's email
+            test_email = request.data.get('email', request.user.email)
+            if not test_email:
+                return Response(
+                    {"detail": "No email address provided for testing."},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            
+            # Create email connection
+            connection = get_connection(
+                host=email_config['EMAIL_HOST'],
+                port=email_config['EMAIL_PORT'],
+                username=email_config['EMAIL_HOST_USER'],
+                password=email_config['EMAIL_HOST_PASSWORD'],
+                use_tls=email_config['EMAIL_USE_TLS'],
+                use_ssl=email_config['EMAIL_USE_SSL'],
+                fail_silently=False
+            )
+            
+            # Test connection
+            connection.open()
+            
+            # Send test email
+            from django.core.mail import EmailMessage
+            test_email_msg = EmailMessage(
+                subject='Test SMTP Configuration - CIN Event Management',
+                body=f"""
+Bonjour,
+
+Ceci est un email de test pour vérifier la configuration SMTP.
+
+Si vous recevez cet email, cela signifie que votre configuration SMTP est correcte.
+
+Configuration utilisée:
+- Serveur: {email_config['EMAIL_HOST']}
+- Port: {email_config['EMAIL_PORT']}
+- TLS: {email_config['EMAIL_USE_TLS']}
+- SSL: {email_config['EMAIL_USE_SSL']}
+- Expéditeur: {email_config['DEFAULT_FROM_EMAIL']}
+
+Cordialement,
+Système de gestion d'événements CIN
+                """,
+                from_email=email_config['DEFAULT_FROM_EMAIL'],
+                to=[test_email],
+                connection=connection
+            )
+            
+            test_email_msg.send()
+            connection.close()
+            
+            logger.info(f"Test SMTP email sent successfully to {test_email}")
+            
+            return Response({
+                "detail": f"Test email sent successfully to {test_email}. Please check your inbox.",
+                "success": True
+            })
+            
+        except Exception as e:
+            logger.error(f"SMTP test failed: {str(e)}", exc_info=True)
+            error_message = str(e)
+            
+            # Provide more user-friendly error messages
+            if "authentication failed" in error_message.lower() or "535" in error_message:
+                error_message = "Authentication failed. Please check your SMTP username and password."
+            elif "connection refused" in error_message.lower() or "connection timed out" in error_message.lower():
+                error_message = f"Could not connect to SMTP server {email_config.get('EMAIL_HOST', 'unknown')}. Please check the host and port."
+            elif "ssl" in error_message.lower() or "tls" in error_message.lower():
+                error_message = "SSL/TLS error. Please check if you need to enable TLS or SSL for your SMTP server."
+            
+            return Response(
+                {"detail": f"SMTP test failed: {error_message}", "success": False},
+                status=status.HTTP_400_BAD_REQUEST
             )
