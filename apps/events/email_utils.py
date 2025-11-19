@@ -21,7 +21,15 @@ def send_participant_invitation_email(participant, qr_bytes=None):
         bool: True if email sent successfully, False otherwise
     """
     try:
-        # Convert QR bytes to base64 for inline display
+        # Get QR code bytes - use provided bytes or read from saved file
+        if not qr_bytes and participant.qr_code:
+            try:
+                with participant.qr_code.open('rb') as f:
+                    qr_bytes = f.read()
+            except Exception:
+                qr_bytes = None
+        
+        # Convert QR bytes to base64 for inline display (fallback for clients that support it)
         qr_base64 = None
         if qr_bytes:
             import base64
@@ -100,7 +108,13 @@ def send_participant_invitation_email(participant, qr_bytes=None):
         # Attach HTML version
         email.attach_alternative(html_content, "text/html")
         
-        # QR code is now displayed inline in the email, no attachment needed
+        # Attach QR code as inline image for email clients that don't support base64
+        if qr_bytes:
+            from email.mime.image import MIMEImage
+            qr_image = MIMEImage(qr_bytes)
+            qr_image.add_header('Content-ID', '<qrcode>')
+            qr_image.add_header('Content-Disposition', 'inline', filename='qrcode.png')
+            email.attach(qr_image)
         
         # Send email
         email.send(fail_silently=False)
@@ -125,7 +139,15 @@ def send_participant_update_email(participant, qr_bytes=None):
         bool: True if email sent successfully, False otherwise
     """
     try:
-        # Convert QR bytes to base64 for inline display
+        # Get QR code bytes - use provided bytes or read from saved file
+        if not qr_bytes and participant.qr_code:
+            try:
+                with participant.qr_code.open('rb') as f:
+                    qr_bytes = f.read()
+            except Exception:
+                qr_bytes = None
+        
+        # Convert QR bytes to base64 for inline display (fallback for clients that support it)
         qr_base64 = None
         if qr_bytes:
             import base64
@@ -204,7 +226,13 @@ def send_participant_update_email(participant, qr_bytes=None):
         # Attach HTML version
         email.attach_alternative(html_content, "text/html")
         
-        # QR code is now displayed inline in the email, no attachment needed
+        # Attach QR code as inline image for email clients that don't support base64
+        if qr_bytes:
+            from email.mime.image import MIMEImage
+            qr_image = MIMEImage(qr_bytes)
+            qr_image.add_header('Content-ID', '<qrcode>')
+            qr_image.add_header('Content-Disposition', 'inline', filename='qrcode.png')
+            email.attach(qr_image)
         
         # Send email
         email.send(fail_silently=False)
